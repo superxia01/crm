@@ -1,0 +1,120 @@
+package service
+
+import (
+	"errors"
+
+	"github.com/xia/nextcrm/internal/dto"
+	"github.com/xia/nextcrm/internal/models"
+	"github.com/xia/nextcrm/internal/repository"
+	"github.com/xia/nextcrm/pkg/jwt"
+	"golang.org/x/crypto/bcrypt"
+)
+
+type AuthService struct {
+	userRepo  *repository.UserRepository
+	jwtManager *jwt.Manager
+}
+
+func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwt.Manager) *AuthService {
+	return &AuthService{
+		userRepo:  userRepo,
+		jwtManager: jwtManager,
+	}
+}
+
+// Register registers a new user
+func (s *AuthService) Register(req *dto.RegisterRequest) (*dto.AuthResponse, error) {
+	// Check if user already exists
+	existingUser, err := s.userRepo.FindByEmail(req.Email)
+	if err == nil && existingUser != nil {
+		return nil, errors.New("user with this email already exists")
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create user
+	user := &models.User{
+		Email:        req.Email,
+		Name:         req.Name,
+		PasswordHash: string(hashedPassword),
+		Role:         "USER",
+		IsActive:     true,
+	}
+
+	if err := s.userRepo.Create(user); err != nil {
+		return nil, err
+	}
+
+	// Generate token
+	token, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.AuthResponse{
+		Token: token,
+		User: dto.UserResponse{
+			ID:       user.ID,
+			Email:    user.Email,
+			Name:     user.Name,
+			Role:     user.Role,
+			IsActive: user.IsActive,
+		},
+	}, nil
+}
+
+// Login logs in a user
+func (s *AuthService) Login(req *dto.LoginRequest) (*dto.AuthResponse, error) {
+	// Find user by email
+	user, err := s.userRepo.FindByEmail(req.Email)
+	if err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+
+	// Check password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, errors.New("invalid email or password")
+	}
+
+	// Check if user is active
+	if !user.IsActive {
+		return nil, errors.New("user account is inactive")
+	}
+
+	// Generate token
+	token, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Role)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.AuthResponse{
+		Token: token,
+		User: dto.UserResponse{
+			ID:       user.ID,
+			Email:    user.Email,
+			Name:     user.Name,
+			Role:     user.Role,
+			IsActive: user.IsActive,
+		},
+	}, nil
+}
+
+// GetUserByID retrieves a user by ID
+func (s *AuthService) GetUserByID(id uint64) (*dto.UserResponse, error) {
+	user, err := s.userRepo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.UserResponse{
+		ID:       user.ID,
+		Email:    user.Email,
+		Name:     user.Name,
+		Role:     user.Role,
+		IsActive: user.IsActive,
+	}, nil
+}

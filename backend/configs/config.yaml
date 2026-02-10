@@ -1,0 +1,21 @@
+server:
+  port: "8080"
+  env: "development"
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "postgres"
+  password: ""
+  dbname: "nextcrm"
+  sslmode: "disable"
+
+jwt:
+  secret: "your-secret-key-change-this"
+  expiryHours: 24
+
+deepseek:
+  apiKey: ""
+  baseURL: "https://api.deepseek.com"
+  model: "deepseek-chat"
+  embeddingModel: "deepseek-embedding"

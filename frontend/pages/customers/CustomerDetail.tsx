@@ -13,6 +13,7 @@ import { dealService, CustomerDealsSummary } from '../../lib/services/dealServic
 import { Card, Button, Badge } from '../../components/UI';
 import { useLanguage } from '../../contexts';
 import { FollowUpModal } from '../../components/FollowUpModal';
+import { InteractionList } from '../../components/InteractionList';
 import { handleApiError } from '../../lib/apiClient';
 
 export const CustomerDetail: React.FC = () => {
@@ -32,6 +33,7 @@ export const CustomerDetail: React.FC = () => {
   } | null>(null);
   const [dealsSummary, setDealsSummary] = useState<CustomerDealsSummary | null>(null);
   const [isLoadingDeals, setIsLoadingDeals] = useState(false);
+  const [interactionRefreshTrigger, setInteractionRefreshTrigger] = useState(0);
 
   const handleFollowUpSaved = () => {
     // Refresh customer data to show updated follow-up count
@@ -39,6 +41,8 @@ export const CustomerDetail: React.FC = () => {
       loadCustomer(customer.id);
       loadInteractions(customer.id);
     }
+    // Trigger interaction list refresh
+    setInteractionRefreshTrigger(prev => prev + 1);
   };
 
   useEffect(() => {
@@ -465,64 +469,11 @@ export const CustomerDetail: React.FC = () => {
                 <span>跟进次数: {customer.follow_up_count || 0}</span>
               </div>
 
-              {isLoadingInteractions ? (
-                <div className="text-center py-8">
-                  <Loader2 className="animate-spin text-primary mx-auto" size={24} />
-                  <p className="text-xs text-slate-400 mt-2">加载中...</p>
-                </div>
-              ) : interactions.length > 0 ? (
-                <div className="space-y-4">
-                  {interactions.map((interaction, index) => (
-                    <div key={interaction.id} className="flex gap-3">
-                      {/* Timeline Line */}
-                      {index < interactions.length - 1 && (
-                        <div className="absolute left-[19px] top-10 w-0.5 h-full bg-gray-200 dark:bg-slate-700"></div>
-                      )}
-
-                      {/* Icon */}
-                      <div className="relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0
-                        ${interaction.type === 'call' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
-                          interaction.type === 'email' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400' :
-                          interaction.type === 'meeting' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
-                          'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400'}">
-                        {interaction.type === 'call' ? <PhoneCall size={16} /> :
-                         interaction.type === 'email' ? <MailIcon size={16} /> :
-                         interaction.type === 'meeting' ? <User size={16} /> :
-                         <MessageSquare size={16} />}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 pb-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-slate-900 dark:text-white">
-                            {interaction.type === 'call' ? '电话沟通' :
-                             interaction.type === 'email' ? '邮件往来' :
-                             interaction.type === 'meeting' ? '会议' :
-                             interaction.type === 'note' ? '备注' : '其他'}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            {new Date(interaction.created_at).toLocaleDateString('zh-CN')}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
-                          {interaction.content}
-                        </p>
-                        {interaction.next_action && (
-                          <div className="mt-2 flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400">
-                            <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
-                            <span>下一步: {interaction.next_action}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
-                  <FileText size={32} className="mx-auto mb-2 opacity-50" />
-                  暂无跟进记录
-                </div>
-              )}
+              <InteractionList
+                customerId={customer.id}
+                customerName={customer.name}
+                refreshTrigger={interactionRefreshTrigger}
+              />
             </div>
           </Card>
         </div>

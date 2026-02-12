@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Filter, MessageSquarePlus, Sparkles, Edit, Trash2, Archive, LayoutGrid, List, Loader2, Download, FileUp, CheckSquare, Square, X } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Filter, MessageSquarePlus, Sparkles, Edit, Trash2, Archive, LayoutGrid, List, Loader2, Download, FileUp, CheckSquare, Square, X, BoxArchive } from 'lucide-react';
 import { customerService, Customer } from '../../lib/services/customerService';
 import { Card, Button, Badge } from '../../components/UI';
 import { useLanguage } from '../../contexts';
@@ -312,7 +312,16 @@ export const CustomerList: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('customersTitle')}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('customersTitle')}</h1>
+            <Link
+              to="/customers/archived"
+              className="text-sm text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary flex items-center gap-1"
+            >
+              <BoxArchive size={16} />
+              查看归档
+            </Link>
+          </div>
           <p className="text-slate-500 dark:text-slate-400 mt-1">{t('customersSubtitle')}</p>
         </div>
         <div className="flex items-center gap-3">

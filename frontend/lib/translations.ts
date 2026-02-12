@@ -5,6 +5,7 @@ export const translations = {
     // Layout
     dashboard: 'Dashboard',
     customers: 'Customers',
+    archivedCustomers: 'Archived',
     deals: 'Deals',
     scriptAssistant: 'Script Assistant',
     knowledgeBase: 'Knowledge Base',
@@ -180,6 +181,7 @@ export const translations = {
     // Layout
     dashboard: '仪表盘',
     customers: '客户管理',
+    archivedCustomers: '已归档',
     deals: '业绩管理',
     scriptAssistant: '话术助手',
     knowledgeBase: '知识库',

@@ -6,6 +6,7 @@ import { CustomerList } from './pages/customers/CustomerList';
 import { CustomerDetail } from './pages/customers/CustomerDetail';
 import { CustomerEdit } from './pages/customers/CustomerEdit';
 import { NewCustomer } from './pages/customers/NewCustomer';
+import { ArchivedCustomers } from './pages/customers/ArchivedCustomers';
 import { ScriptAssistant } from './pages/scripts/ScriptAssistant';
 import { KnowledgeBase } from './pages/knowledge/KnowledgeBase';
 import { Dashboard } from './pages/dashboard/Dashboard';
@@ -42,6 +43,7 @@ const App: React.FC = () => {
                           <Route path="/customers/new" element={<NewCustomer />} />
                           <Route path="/customers/:id" element={<CustomerDetail />} />
                           <Route path="/customers/:id/edit" element={<CustomerEdit />} />
+                          <Route path="/customers/archived" element={<ArchivedCustomers />} />
                           <Route path="/deals" element={<DealList />} />
                           <Route path="/deals/new" element={<DealForm />} />
                           <Route path="/deals/:id/edit" element={<DealForm />} />

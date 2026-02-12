@@ -57,6 +57,11 @@ export const CustomerList: React.FC = () => {
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
   const actionMenuRef = useRef<HTMLDivElement>(null);
 
+  // Drag and Drop State
+  const [draggedCustomerId, setDraggedCustomerId] = useState<number | null>(null);
+  const [draggedOverStage, setDraggedOverStage] = useState<string | null>(null);
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+
   // Load customers
   useEffect(() => {
     loadCustomers();
@@ -234,6 +239,51 @@ export const CustomerList: React.FC = () => {
     } finally {
       setIsBatchProcessing(false);
     }
+  };
+
+  // Drag and Drop Handlers
+  const handleDragStart = (customerId: number) => {
+    setDraggedCustomerId(customerId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    setDraggedOverStage(stage);
+  };
+
+  const handleDragLeave = () => {
+    setDraggedOverStage(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, newStage: string) => {
+    e.preventDefault();
+    setDraggedOverStage(null);
+
+    if (!draggedCustomerId) return;
+
+    const customer = customers.find(c => c.id === draggedCustomerId);
+    if (!customer || customer.stage === newStage) {
+      setDraggedCustomerId(null);
+      return;
+    }
+
+    setIsUpdatingStage(true);
+    try {
+      await customerService.updateCustomer(draggedCustomerId, { stage: newStage });
+      showSuccess(`客户 "${customer.name}" 已移动到 "${newStage}"`);
+      loadCustomers();
+    } catch (err) {
+      console.error('Failed to update stage:', err);
+      showError('更新阶段失败');
+    } finally {
+      setIsUpdatingStage(false);
+      setDraggedCustomerId(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedCustomerId(null);
+    setDraggedOverStage(null);
   };
 
   const getIntentColor = (level: string) => {
@@ -665,9 +715,19 @@ export const CustomerList: React.FC = () => {
           /* Kanban Board */
           <div className="flex overflow-x-auto pb-4 gap-4 items-start min-h-[500px]">
              {Object.keys(groupedCustomers).map(groupKey => (
-               <div key={groupKey} className="min-w-[300px] w-[300px] flex-shrink-0 flex flex-col gap-3">
+               <div
+                 key={groupKey}
+                 className="min-w-[300px] w-[300px] flex-shrink-0 flex flex-col gap-3"
+                 onDragOver={(e) => handleDragOver(e, groupKey)}
+                 onDragLeave={handleDragLeave}
+                 onDrop={(e) => handleDrop(e, groupKey)}
+               >
                  {/* Column Header */}
-                 <div className="flex items-center justify-between px-2">
+                 <div className={`flex items-center justify-between px-2 py-2 rounded-lg transition-colors ${
+                   draggedOverStage === groupKey
+                     ? 'bg-primary/10 border-2 border-dashed border-primary'
+                     : ''
+                 }`}>
                     <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
                        {groupKey === 'Uncategorized' ? t('uncategorized') :
                         t(`stage${groupKey.replace(/\s/g, '')}` as any) === `stage${groupKey.replace(/\s/g, '')}` ? groupKey : t(`stage${groupKey.replace(/\s/g, '')}` as any)
@@ -682,11 +742,20 @@ export const CustomerList: React.FC = () => {
                  </div>
 
                  {/* Cards Container */}
-                 <div className="bg-gray-100/50 dark:bg-slate-800/50 rounded-xl p-2 min-h-[100px] flex flex-col gap-3">
+                 <div className="bg-gray-100/50 dark:bg-slate-800/50 rounded-xl p-2 min-h-[100px] flex flex-col gap-3"
+                   style={{ minHeight: draggedOverStage === groupKey ? '200px' : '100px' }}
+                 >
                     {groupedCustomers[groupKey].map(customer => (
                       <div
                         key={customer.id}
-                        className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow group"
+                        draggable={true}
+                        onDragStart={() => handleDragStart(customer.id)}
+                        onDragEnd={handleDragEnd}
+                        className={`bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border transition-all group ${
+                          draggedCustomerId === customer.id
+                            ? 'border-primary opacity-50 cursor-grabbing'
+                            : 'border-gray-200 dark:border-slate-700 cursor-grab hover:shadow-md'
+                        }`}
                       >
                          <div className="flex justify-between items-start mb-2">
                             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{customer.company}</span>

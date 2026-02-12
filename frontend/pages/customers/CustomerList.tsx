@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Filter, MessageSquarePlus, Sparkles, Edit, Trash2, Archive, LayoutGrid, List, Loader2, Download, FileUp } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Filter, MessageSquarePlus, Sparkles, Edit, Trash2, Archive, LayoutGrid, List, Loader2, Download, FileUp, CheckSquare, Square, X } from 'lucide-react';
 import { customerService, Customer } from '../../lib/services/customerService';
 import { Card, Button, Badge } from '../../components/UI';
 import { useLanguage } from '../../contexts';
 import { FollowUpModal } from '../../components/FollowUpModal';
 import { BatchImportModal } from '../../components/BatchImportModal';
+import { BatchEditModal } from '../../components/BatchEditModal';
 import { importExportService } from '../../lib/services/importExportService';
 import { handleApiError } from '../../lib/apiClient';
 import { useToast } from '../../contexts';
@@ -45,6 +46,12 @@ export const CustomerList: React.FC = () => {
   // Import/Export State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Batch Selection State
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<number>>(new Set());
+  const [isAllSelected, setIsAllSelected] = useState(false);
+  const [isBatchEditModalOpen, setIsBatchEditModalOpen] = useState(false);
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
 
   // Actions Menu State
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
@@ -144,6 +151,88 @@ export const CustomerList: React.FC = () => {
       showError(error.message || '导出失败');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  // Batch Selection Functions
+  const handleSelectCustomer = (id: number) => {
+    const newSelection = new Set(selectedCustomerIds);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedCustomerIds(newSelection);
+    setIsAllSelected(newSelection.size === customers.length && customers.length > 0);
+  };
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedCustomerIds(new Set());
+      setIsAllSelected(false);
+    } else {
+      setSelectedCustomerIds(new Set(customers.map(c => c.id)));
+      setIsAllSelected(true);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCustomerIds(new Set());
+    setIsAllSelected(false);
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedCustomerIds.size === 0) return;
+    if (!confirm(`确定要删除选中的 ${selectedCustomerIds.size} 个客户吗？`)) return;
+
+    setIsBatchProcessing(true);
+    try {
+      await Promise.all(
+        Array.from(selectedCustomerIds).map(id => customerService.deleteCustomer(id))
+      );
+      showSuccess(`已删除 ${selectedCustomerIds.size} 个客户`);
+      handleClearSelection();
+      loadCustomers();
+    } catch (err) {
+      console.error('Batch delete error:', err);
+      showError(handleApiError(err));
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  };
+
+  const handleBatchArchive = async () => {
+    if (selectedCustomerIds.size === 0) return;
+    if (!confirm(`确定要归档选中的 ${selectedCustomerIds.size} 个客户吗？`)) return;
+
+    setIsBatchProcessing(true);
+    try {
+      await Promise.all(
+        Array.from(selectedCustomerIds).map(id => customerService.archiveCustomer(id))
+      );
+      showSuccess(`已归档 ${selectedCustomerIds.size} 个客户`);
+      handleClearSelection();
+      loadCustomers();
+    } catch (err) {
+      console.error('Batch archive error:', err);
+      showError(handleApiError(err));
+    } finally {
+      setIsBatchProcessing(false);
+    }
+  };
+
+  const handleBatchExport = async () => {
+    if (selectedCustomerIds.size === 0) return;
+
+    setIsBatchProcessing(true);
+    try {
+      await importExportService.exportCustomers('xlsx', Array.from(selectedCustomerIds));
+      showSuccess(`已导出 ${selectedCustomerIds.size} 个客户`);
+    } catch (error: any) {
+      console.error('Batch export error:', error);
+      showError(error.message || '导出失败');
+    } finally {
+      setIsBatchProcessing(false);
     }
   };
 
@@ -274,6 +363,68 @@ export const CustomerList: React.FC = () => {
       </div>
 
       <div className="bg-transparent space-y-4">
+        {/* Batch Actions Bar */}
+        {selectedCustomerIds.size > 0 && (
+          <Card className="bg-primary/5 border-primary/20">
+            <div className="p-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                  已选择 {selectedCustomerIds.size} 项
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsBatchEditModalOpen(true)}
+                  disabled={isBatchProcessing}
+                  className="text-sm"
+                >
+                  <Edit size={14} className="mr-1" />
+                  批量编辑
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBatchArchive}
+                  disabled={isBatchProcessing}
+                  className="text-sm"
+                >
+                  <Archive size={14} className="mr-1" />
+                  归档
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBatchExport}
+                  disabled={isBatchProcessing}
+                  className="text-sm"
+                >
+                  <Download size={14} className="mr-1" />
+                  导出
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBatchDelete}
+                  disabled={isBatchProcessing}
+                  className="text-sm text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/30 dark:hover:bg-red-900/20 dark:text-red-400"
+                >
+                  <Trash2 size={14} className="mr-1" />
+                  删除
+                </Button>
+                <button
+                  onClick={handleClearSelection}
+                  className="p-1.5 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
+                  title="取消选择"
+                >
+                  <X size={16} className="text-slate-500" />
+                </button>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* Toolbar */}
         <Card className="p-0 overflow-hidden">
           <div className="p-4 border-b border-gray-100 dark:border-slate-700 flex flex-col sm:flex-row gap-4 justify-between">
@@ -329,6 +480,19 @@ export const CustomerList: React.FC = () => {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-gray-50/50 dark:bg-slate-800/50">
                   <tr>
+                    <th className="px-4 py-3 font-medium w-10">
+                      <button
+                        onClick={handleSelectAll}
+                        className="hover:bg-gray-200 dark:hover:bg-slate-700 rounded p-1 transition-colors"
+                        title={isAllSelected ? "取消全选" : "全选"}
+                      >
+                        {isAllSelected ? (
+                          <CheckSquare size={16} className="text-primary" />
+                        ) : (
+                          <Square size={16} className="text-slate-400" />
+                        )}
+                      </button>
+                    </th>
                     <th className="px-4 py-3 font-medium">{t('colName')}</th>
                     <th className="px-4 py-3 font-medium">{t('colCompany')}</th>
                     <th className="px-4 py-3 font-medium">{t('colStage')}</th>
@@ -342,7 +506,25 @@ export const CustomerList: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                   {customers.map((customer) => (
-                    <tr key={customer.id} className="hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors group">
+                    <tr
+                      key={customer.id}
+                      className={`hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors group ${
+                        selectedCustomerIds.has(customer.id) ? 'bg-primary/5 dark:bg-primary/10' : ''
+                      }`}
+                    >
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={() => handleSelectCustomer(customer.id)}
+                          className="hover:bg-gray-200 dark:hover:bg-slate-700 rounded p-1 transition-colors"
+                          title="选择"
+                        >
+                          {selectedCustomerIds.has(customer.id) ? (
+                            <CheckSquare size={16} className="text-primary" />
+                          ) : (
+                            <Square size={16} className="text-slate-400" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-4 py-4">
                         <Link to={`/customers/${customer.id}`} className="font-medium text-slate-900 dark:text-slate-100 hover:text-primary">
                           {customer.name}
@@ -544,6 +726,17 @@ export const CustomerList: React.FC = () => {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => loadCustomers()}
+      />
+
+      {/* Batch Edit Modal */}
+      <BatchEditModal
+        isOpen={isBatchEditModalOpen}
+        onClose={() => setIsBatchEditModalOpen(false)}
+        customerIds={Array.from(selectedCustomerIds)}
+        onSuccess={() => {
+          loadCustomers();
+          handleClearSelection();
+        }}
       />
     </div>
   );

@@ -41,9 +41,14 @@ class ImportExportService {
   }
 
   // Export customers to Excel or CSV
-  async exportCustomers(format: 'xlsx' | 'csv' = 'xlsx'): Promise<void> {
+  async exportCustomers(format: 'xlsx' | 'csv' = 'xlsx', ids?: number[]): Promise<void> {
     try {
-      const response = await fetch(`${apiClient['apiUrl']}/customers/export?format=${format}`, {
+      const params = new URLSearchParams({ format });
+      if (ids && ids.length > 0) {
+        params.append('ids', ids.join(','));
+      }
+
+      const response = await fetch(`${apiClient['apiUrl']}/customers/export?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiClient.getToken()}`,

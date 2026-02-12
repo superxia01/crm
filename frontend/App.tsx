@@ -10,6 +10,7 @@ import { ArchivedCustomers } from './pages/customers/ArchivedCustomers';
 import { ScriptAssistant } from './pages/scripts/ScriptAssistant';
 import { KnowledgeBase } from './pages/knowledge/KnowledgeBase';
 import { Dashboard } from './pages/dashboard/Dashboard';
+import { Activities } from './pages/Activities';
 import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { AuthCallback } from './pages/auth/Callback';
@@ -39,6 +40,7 @@ const App: React.FC = () => {
                       <Layout>
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
+                          <Route path="/activities" element={<Activities />} />
                           <Route path="/customers" element={<CustomerList />} />
                           <Route path="/customers/new" element={<NewCustomer />} />
                           <Route path="/customers/:id" element={<CustomerDetail />} />

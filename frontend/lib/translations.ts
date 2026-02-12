@@ -4,6 +4,7 @@ export const translations = {
   en: {
     // Layout
     dashboard: 'Dashboard',
+    activities: 'Activity Feed',
     customers: 'Customers',
     archivedCustomers: 'Archived',
     deals: 'Deals',
@@ -180,6 +181,7 @@ export const translations = {
   zh: {
     // Layout
     dashboard: '仪表盘',
+    activities: '活动记录',
     customers: '客户管理',
     archivedCustomers: '已归档',
     deals: '业绩管理',

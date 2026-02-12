@@ -14,6 +14,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const navItems = [
     { label: t('dashboard'), path: '/', icon: LayoutDashboard },
+    { label: t('activities'), path: '/activities', icon: Search },
     { label: t('customers'), path: '/customers', icon: Users },
     { label: t('deals'), path: '/deals', icon: DollarSign },
     { label: t('scriptAssistant'), path: '/scripts', icon: MessageSquareText },

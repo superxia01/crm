@@ -36,6 +36,21 @@ export const CustomerEdit: React.FC = () => {
     expected_close_date: '',
     probability: 0,
     annual_revenue: '',
+    customer_no: '',
+    customer_type: '',
+    wechat_id: '',
+    address: '',
+    company_scale: '',
+    registered_capital: '',
+    legal_person: '',
+    credit_code: '',
+    customer_level: '',
+    customer_status: '',
+    potential_score: 0,
+    invoice_title: '',
+    tax_number: '',
+    bank_account: '',
+    payment_terms: '',
   });
 
   // Load customer data
@@ -71,6 +86,21 @@ export const CustomerEdit: React.FC = () => {
         expected_close_date: data.expected_close_date || '',
         probability: data.probability || 0,
         annual_revenue: data.annual_revenue || '',
+        customer_no: data.customer_no || '',
+        customer_type: data.customer_type || '',
+        wechat_id: data.wechat_id || '',
+        address: data.address || '',
+        company_scale: data.company_scale || '',
+        registered_capital: data.registered_capital || '',
+        legal_person: data.legal_person || '',
+        credit_code: data.credit_code || '',
+        customer_level: data.customer_level || '',
+        customer_status: data.customer_status || '',
+        potential_score: data.potential_score || 0,
+        invoice_title: data.invoice_title || '',
+        tax_number: data.tax_number || '',
+        bank_account: data.bank_account || '',
+        payment_terms: data.payment_terms || '',
       });
     } catch (err) {
       console.error('Failed to load customer:', err);
@@ -82,9 +112,10 @@ export const CustomerEdit: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    const isNum = (v: string) => (v === '' ? undefined : Number(v));
     setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: (name === 'potential_score' || name === 'probability') ? isNum(value) : value,
     }));
     setError(null);
   };
@@ -369,6 +400,55 @@ export const CustomerEdit: React.FC = () => {
                 <span>100%</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Extended Information Section */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4 pb-2 border-b border-gray-200 dark:border-slate-700">
+            扩展信息
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Input label="客户编号" name="customer_no" value={formData.customer_no} onChange={handleInputChange} placeholder="可留空自动生成" />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">客户类型</label>
+              <select name="customer_type" value={formData.customer_type} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-slate-900 dark:text-slate-100">
+                <option value="">请选择</option>
+                <option value="企业">企业</option>
+                <option value="个人">个人</option>
+                <option value="渠道">渠道</option>
+              </select>
+            </div>
+            <Input label="微信号/企业微信" name="wechat_id" value={formData.wechat_id} onChange={handleInputChange} placeholder="微信号或企业微信 ID" />
+            <Input label="地址" name="address" value={formData.address} onChange={handleInputChange} placeholder="省市区 + 详细地址" />
+            <Input label="公司规模" name="company_scale" value={formData.company_scale} onChange={handleInputChange} placeholder="如：1-50人" />
+            <Input label="注册资本" name="registered_capital" value={formData.registered_capital} onChange={handleInputChange} placeholder="如：100万" />
+            <Input label="法人代表" name="legal_person" value={formData.legal_person} onChange={handleInputChange} />
+            <Input label="统一社会信用代码" name="credit_code" value={formData.credit_code} onChange={handleInputChange} />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">客户等级</label>
+              <select name="customer_level" value={formData.customer_level} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-slate-900 dark:text-slate-100">
+                <option value="">请选择</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="VIP">VIP</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">客户状态</label>
+              <select name="customer_status" value={formData.customer_status} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm text-slate-900 dark:text-slate-100">
+                <option value="">请选择</option>
+                <option value="活跃">活跃</option>
+                <option value="休眠">休眠</option>
+                <option value="流失">流失</option>
+              </select>
+            </div>
+            <Input label="潜力评分 (0-100)" name="potential_score" type="number" min={0} max={100} value={formData.potential_score ?? ''} onChange={handleInputChange} placeholder="0-100" />
+            <Input label="发票抬头" name="invoice_title" value={formData.invoice_title} onChange={handleInputChange} />
+            <Input label="纳税人识别号" name="tax_number" value={formData.tax_number} onChange={handleInputChange} />
+            <Input label="开户行及账号" name="bank_account" value={formData.bank_account} onChange={handleInputChange} placeholder="开户行 + 账号" />
+            <Input label="账期" name="payment_terms" value={formData.payment_terms} onChange={handleInputChange} placeholder="如：月结30天" />
           </div>
         </div>
 

@@ -25,13 +25,17 @@ export const NewCustomer: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Chat State
+  // Chat State（真 AI：豆包）
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user' | 'ai'; text: string }>>([
-    { id: '1', role: 'ai', text: '你好！我可以帮你快速注册新客户。直接输入客户信息即可，我会一步步引导你。今天要添加谁？' }
+    { id: '1', role: 'ai', text: '你好！我可以帮你快速注册新客户。你可以直接说出或输入客户信息（姓名、公司、电话为必填），我会尽量少问几轮就帮你填齐。' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
-  const [chatStep, setChatStep] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
+  const [createSuccessTip, setCreateSuccessTip] = useState<string | null>(null); // 创建成功后提示可补充选填项
+
+  // 进度：必填项 姓名、公司、电话 已填数量 / 3 * 100
+  const requiredFilled = [formData.name?.trim(), formData.company?.trim(), formData.phone?.trim()].filter(Boolean).length;
+  const chatProgressPercent = Math.round((requiredFilled / 3) * 100);
 
   // Voice State
   const [isRecording, setIsRecording] = useState(false);
@@ -40,14 +44,6 @@ export const NewCustomer: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  const conversationFlow = [
-    { field: 'name', text: '请告诉我客户的名字？' },
-    { field: 'company', text: '客户的公司名称是什么？' },
-    { field: 'phone', text: '客户的联系电话？' },
-    { field: 'email', text: '客户的邮箱地址？（可选）' },
-    { field: 'done', text: '好的，信息收集完成！' },
-  ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -74,38 +70,67 @@ export const NewCustomer: React.FC = () => {
     }
   };
 
-  // --- Chat Logic ---
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  // --- Chat Logic：对接豆包，引导填必填项，收齐后创建客户 ---
+  const handleSendMessage = async () => {
+    const text = inputMessage.trim();
+    if (!text) return;
 
-    const newMsg = { id: Date.now().toString(), role: 'user' as const, text: inputMessage };
-    setMessages(prev => [...prev, newMsg]);
+    const userMsg = { id: Date.now().toString(), role: 'user' as const, text };
+    setMessages(prev => [...prev, userMsg]);
     setInputMessage('');
     setIsTyping(true);
+    setError(null);
+    setCreateSuccessTip(null);
 
-    // Update form data based on step
-    if (chatStep < conversationFlow.length) {
-      const field = conversationFlow[chatStep].field;
-      if (field !== 'done') {
-        setFormData(prev => ({ ...prev, [field]: inputMessage }));
+    try {
+      const apiMessages = messages.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user' as const, content: m.text }));
+      apiMessages.push({ role: 'user' as const, content: text });
+
+      const currentFields: Record<string, string> = {
+        name: formData.name || '',
+        company: formData.company || '',
+        phone: formData.phone || '',
+        position: formData.position || '',
+        email: formData.email || '',
+        budget: formData.budget || '',
+        intent_level: formData.intent_level || 'Medium',
+        notes: formData.notes || '',
+      };
+
+      const res = await aiService.customerIntakeChat({
+        messages: apiMessages,
+        current_fields: currentFields,
+      });
+
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: res.reply }]);
+
+      const merged = { ...formData, ...res.extracted_fields };
+      if (merged.intent_level === '') merged.intent_level = 'Medium';
+      setFormData(merged);
+
+      if (res.can_create) {
+        const createPayload: CreateCustomerRequest = {
+          name: merged.name,
+          company: merged.company,
+          phone: merged.phone,
+          position: merged.position || undefined,
+          email: merged.email || undefined,
+          budget: merged.budget || undefined,
+          intent_level: merged.intent_level || 'Medium',
+          notes: merged.notes || undefined,
+        };
+        await customerService.createCustomer(createPayload);
+        showSuccess('客户已创建');
+        setCreateSuccessTip('您还可以在客户详情中补充：职位、邮箱、预算、意向、备注等选填项。');
+        setTimeout(() => navigate('/customers'), 2000);
       }
-    }
-
-    // AI Response
-    setTimeout(() => {
-      const nextStep = chatStep + 1;
-      setChatStep(nextStep);
-
-      let aiText = '';
-      if (nextStep < conversationFlow.length) {
-        aiText = conversationFlow[chatStep].text;
-      } else {
-        aiText = '我已经收集了所有必要的信息。你可以在表单视图中查看和编辑。';
-      }
-
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: aiText }]);
+    } catch (err) {
+      console.error('AI 对话失败:', err);
+      setError(handleApiError(err));
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: '抱歉，对话暂时出错了，请重试或切换到表单手动填写。' }]);
+    } finally {
       setIsTyping(false);
-    }, 800);
+    }
   };
 
   // --- Voice Recording Logic ---
@@ -171,6 +196,13 @@ export const NewCustomer: React.FC = () => {
   const applyVoiceToForm = () => {
     setFormData(prev => ({ ...prev, notes: (prev.notes ? prev.notes + '\n\n' : '') + voiceText }));
     setMode('form');
+  };
+
+  /** 将语音识别结果填入 AI 对话输入框，切换到对话模式，用户可编辑后发送 */
+  const applyVoiceToChat = () => {
+    setInputMessage(voiceText);
+    setMode('chat');
+    showSuccess('已填入输入框，可编辑后发送给 AI');
   };
 
   const formatTime = (seconds: number) => {
@@ -310,7 +342,10 @@ export const NewCustomer: React.FC = () => {
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">识别结果</p>
                   <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{voiceText}</p>
                 </div>
-                <div className="mt-4 flex justify-center gap-3">
+                <div className="mt-4 flex justify-center gap-3 flex-wrap">
+                  <Button onClick={applyVoiceToChat}>
+                    填入 AI 对话
+                  </Button>
                   <Button onClick={applyVoiceToForm}>
                     填入表单
                   </Button>
@@ -326,19 +361,24 @@ export const NewCustomer: React.FC = () => {
 
       {mode === 'chat' && (
         <Card className="h-[600px] max-h-[calc(100vh-10rem)] flex flex-col p-0 overflow-hidden min-h-0">
-          {/* Progress */}
+          {/* Progress：必填项 姓名、公司、电话 填齐即 100% */}
           <div className="shrink-0 bg-blue-50 dark:bg-blue-900/20 px-6 py-3 border-b border-blue-100 dark:border-blue-800 flex items-center justify-between">
             <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{t('aiAssistantActive')}</span>
             <div className="flex items-center space-x-1">
-              <span className="text-xs text-blue-600 dark:text-blue-400">{Math.round((chatStep / conversationFlow.length) * 100)}% {t('complete')}</span>
+              <span className="text-xs text-blue-600 dark:text-blue-400">{chatProgressPercent}% {t('complete')}</span>
               <div className="w-20 h-1.5 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-500 transition-all duration-500"
-                  style={{ width: `${(chatStep / conversationFlow.length) * 100}%` }}
+                  style={{ width: `${chatProgressPercent}%` }}
                 ></div>
               </div>
             </div>
           </div>
+          {createSuccessTip && (
+            <div className="shrink-0 px-6 py-2 bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 text-sm text-green-700 dark:text-green-300">
+              {createSuccessTip}
+            </div>
+          )}
 
           {/* Messages: min-h-0 lets flex child shrink so overflow-y-auto can scroll */}
           <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-slate-900/50">
@@ -392,7 +432,7 @@ export const NewCustomer: React.FC = () => {
               <button onClick={() => setMode('form')} className="text-xs text-slate-500 hover:text-primary hover:underline dark:text-slate-400 dark:hover:text-primary">
                 {t('switchToManual')}
               </button>
-              {chatStep >= 3 && (
+              {chatProgressPercent === 100 && (
                 <Button variant="ghost" className="text-xs h-6" onClick={() => setMode('form')}>
                   {t('reviewSave')}
                 </Button>

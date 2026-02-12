@@ -9,6 +9,7 @@ import {
 import { customerService, Customer } from '../../lib/services/customerService';
 import { aiService } from '../../lib/services/aiService';
 import { interactionService, Interaction } from '../../lib/services/interactionService';
+import { dealService, CustomerDealsSummary } from '../../lib/services/dealService';
 import { Card, Button, Badge } from '../../components/UI';
 import { useLanguage } from '../../contexts';
 import { FollowUpModal } from '../../components/FollowUpModal';
@@ -29,6 +30,8 @@ export const CustomerDetail: React.FC = () => {
     id: number;
     name: string;
   } | null>(null);
+  const [dealsSummary, setDealsSummary] = useState<CustomerDealsSummary | null>(null);
+  const [isLoadingDeals, setIsLoadingDeals] = useState(false);
 
   const handleFollowUpSaved = () => {
     // Refresh customer data to show updated follow-up count
@@ -56,13 +59,25 @@ export const CustomerDetail: React.FC = () => {
     }
   };
 
+  const loadDeals = async (customerId: number) => {
+    setIsLoadingDeals(true);
+    try {
+      const summary = await dealService.listDealsByCustomerId(customerId);
+      setDealsSummary(summary);
+    } catch (_) {
+      setDealsSummary({ deals: [], total_amount: 0, repeat_count: 0 });
+    } finally {
+      setIsLoadingDeals(false);
+    }
+  };
+
   const loadCustomer = async (customerId: number) => {
     try {
       setIsLoading(true);
       const data = await customerService.getCustomer(customerId);
       setCustomer(data);
-      // Load interactions after customer is loaded
       loadInteractions(customerId);
+      loadDeals(customerId);
     } catch (err) {
       console.error('Failed to load customer:', err);
       setError(handleApiError(err));
@@ -254,6 +269,44 @@ export const CustomerDetail: React.FC = () => {
             </div>
           </Card>
 
+          {/* Extended Info (optional) */}
+          {(customer.customer_no || customer.customer_level || customer.customer_status || customer.wechat_id || customer.address) && (
+            <Card title="扩展信息">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {customer.customer_no && (
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">客户编号</div>
+                    <div className="text-slate-900 dark:text-white">{customer.customer_no}</div>
+                  </div>
+                )}
+                {customer.customer_level && (
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">客户等级</div>
+                    <Badge color="blue">{customer.customer_level}</Badge>
+                  </div>
+                )}
+                {customer.customer_status && (
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">客户状态</div>
+                    <div className="text-slate-900 dark:text-white">{customer.customer_status}</div>
+                  </div>
+                )}
+                {customer.wechat_id && (
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">微信/企业微信</div>
+                    <div className="text-slate-900 dark:text-white">{customer.wechat_id}</div>
+                  </div>
+                )}
+                {customer.address && (
+                  <div className="md:col-span-2">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">地址</div>
+                    <div className="text-slate-900 dark:text-white">{customer.address}</div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           {/* Contract Information */}
           <Card title="合同信息">
             <div className="space-y-4">
@@ -325,6 +378,81 @@ export const CustomerDetail: React.FC = () => {
                 </div>
               )}
             </div>
+          </Card>
+
+          {/* 业绩记录 */}
+          <Card
+            title="业绩记录"
+            extra={
+              <Button size="sm" onClick={() => navigate(`/deals/new?customer_id=${customer.id}`)}>
+                <DollarSign size={16} className="mr-1" /> 新增业绩
+              </Button>
+            }
+          >
+            {isLoadingDeals ? (
+              <div className="text-center py-8">
+                <Loader2 className="animate-spin text-primary mx-auto" size={24} />
+              </div>
+            ) : dealsSummary && dealsSummary.deals.length > 0 ? (
+              <>
+                <div className="flex gap-6 mb-4 pb-4 border-b border-gray-100 dark:border-slate-700">
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">总业绩金额</div>
+                    <div className="text-xl font-semibold text-slate-900 dark:text-white">
+                      ¥{dealsSummary.total_amount.toLocaleString()}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">复购笔数</div>
+                    <div className="text-xl font-semibold text-slate-900 dark:text-white">{dealsSummary.repeat_count}</div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase">
+                      <tr>
+                        <th className="text-left py-2">编号</th>
+                        <th className="text-left py-2">产品/服务</th>
+                        <th className="text-left py-2">金额</th>
+                        <th className="text-left py-2">成交日期</th>
+                        <th className="text-left py-2">回款</th>
+                        <th className="text-right py-2">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                      {dealsSummary.deals.map((d) => (
+                        <tr key={d.id}>
+                          <td className="py-2 font-mono text-xs">{d.record_no}</td>
+                          <td className="py-2">{d.product_or_service}</td>
+                          <td className="py-2 font-medium">{d.currency} {d.amount.toLocaleString()}</td>
+                          <td className="py-2 text-slate-600 dark:text-slate-400">
+                            {d.deal_at ? new Date(d.deal_at).toLocaleDateString() : '-'}
+                          </td>
+                          <td className="py-2">
+                            <Badge color={d.payment_status === 'paid' ? 'green' : d.payment_status === 'partial' ? 'blue' : 'yellow'}>
+                              {d.payment_status === 'paid' ? '已回款' : d.payment_status === 'partial' ? '部分' : '待回款'}
+                            </Badge>
+                          </td>
+                          <td className="py-2 text-right">
+                            <button
+                              onClick={() => navigate(`/deals/${d.id}/edit`)}
+                              className="text-primary hover:underline text-sm"
+                            >
+                              编辑
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-slate-400 dark:text-slate-500 text-sm">
+                <DollarSign size={32} className="mx-auto mb-2 opacity-50" />
+                暂无业绩记录，点击「新增业绩」添加
+              </div>
+            )}
           </Card>
 
           {/* Activity Timeline */}

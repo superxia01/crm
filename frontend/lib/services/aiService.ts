@@ -70,6 +70,23 @@ export interface OCRBusinessCardResponse {
   confidence?: number;
 }
 
+// 新建客户 AI 对话（豆包）
+export interface CustomerIntakeChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
+export interface CustomerIntakeChatRequest {
+  messages: CustomerIntakeChatMessage[];
+  current_fields: Record<string, string>;
+}
+
+export interface CustomerIntakeChatResponse {
+  reply: string;
+  extracted_fields: Record<string, string>;
+  can_create: boolean;
+}
+
 class AIService {
   // Generate sales script
   async generateScript(data: GenerateScriptRequest): Promise<GenerateScriptResponse> {
@@ -162,6 +179,18 @@ class AIService {
     } catch (error) {
       throw error;
     }
+  }
+
+  // 新建客户 AI 对话（豆包）：引导填必填项，返回回复 + 解析字段 + 是否可创建
+  async customerIntakeChat(data: CustomerIntakeChatRequest): Promise<CustomerIntakeChatResponse> {
+    const response = await apiClient.post<CustomerIntakeChatResponse>(
+      '/ai/customer-intake/chat',
+      data
+    );
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'AI 对话失败');
   }
 }
 

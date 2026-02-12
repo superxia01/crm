@@ -141,6 +141,30 @@ func (h *AIHandler) SpeechToText(c *gin.Context) {
 	utils.SendSuccessWithMessage(c, "Speech recognition completed", result)
 }
 
+// CustomerIntakeChat 新建客户 AI 对话（豆包）：引导填必填项，返回回复 + 解析字段 + 是否可创建
+func (h *AIHandler) CustomerIntakeChat(c *gin.Context) {
+	var req dto.CustomerIntakeChatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.SendError(c, http.StatusBadRequest, "Invalid request: "+err.Error())
+		return
+	}
+	if len(req.Messages) == 0 {
+		utils.SendError(c, http.StatusBadRequest, "messages is required")
+		return
+	}
+	if req.CurrentFields == nil {
+		req.CurrentFields = make(map[string]string)
+	}
+
+	resp, err := h.aiService.CustomerIntakeChat(&req)
+	if err != nil {
+		utils.SendError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.SendSuccess(c, resp)
+}
+
 // OCRBusinessCard handles business card OCR
 func (h *AIHandler) OCRBusinessCard(c *gin.Context) {
 	// 解析 multipart form

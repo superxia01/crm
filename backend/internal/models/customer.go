@@ -37,6 +37,24 @@ type Customer struct {
 
 	Notes        string     `json:"notes,omitempty"`
 	LastContact  *time.Time `json:"last_contact,omitempty"`
+
+	// Extended fields (optional)
+	CustomerNo         string `json:"customer_no,omitempty"`
+	CustomerType       string `json:"customer_type,omitempty"`        // 企业/个人/渠道
+	WechatID           string `json:"wechat_id,omitempty"`
+	Address            string `json:"address,omitempty"`
+	CompanyScale       string `json:"company_scale,omitempty"`
+	RegisteredCapital  string `json:"registered_capital,omitempty"`
+	LegalPerson        string `json:"legal_person,omitempty"`
+	CreditCode         string `json:"credit_code,omitempty"`
+	CustomerLevel      string `json:"customer_level,omitempty"`   // A/B/C, VIP
+	CustomerStatus     string `json:"customer_status,omitempty"`  // 活跃/休眠/流失
+	PotentialScore     int    `json:"potential_score,omitempty"`  // 0-100
+	InvoiceTitle       string `json:"invoice_title,omitempty"`
+	TaxNumber          string `json:"tax_number,omitempty"`
+	BankAccount        string `json:"bank_account,omitempty"`
+	PaymentTerms       string `json:"payment_terms,omitempty"`
+
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty"`

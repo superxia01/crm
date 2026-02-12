@@ -10,11 +10,11 @@ set -e  # 遇到错误立即退出
 # ============================================
 # 配置
 # ============================================
-SYSTEM_NAME="crm-backend"
+SYSTEM_NAME="crm"
 BINARY_NAME="crm-api"
 DOMAIN="crm.crazyaigc.com"
 SERVER="shanghai-tencent"
-REMOTE_DIR="/var/www/crm-backend"
+REMOTE_DIR="/var/www/crm"
 FRONTEND_REMOTE_DIR="/var/www/crm-frontend"
 
 # 颜色输出

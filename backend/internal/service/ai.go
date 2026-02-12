@@ -235,6 +235,110 @@ func (s *AIService) SpeechToText(audioData []byte, format, language string) (*dt
 	}, nil
 }
 
+// CustomerIntakeChat 新建客户对话（豆包）：引导用户用最少轮次填齐必填项，返回回复 + 解析出的字段 + 是否可创建
+func (s *AIService) CustomerIntakeChat(req *dto.CustomerIntakeChatRequest) (*dto.CustomerIntakeChatResponse, error) {
+	const (
+		requiredFields = "name, company, phone" // 必填：姓名、公司、电话
+		optionalFields = "position, email, budget, intent_level, notes"
+	)
+
+	systemPrompt := "你是「新建客户」助手，帮助用户在最少轮次内完成客户信息录入。\n\n" +
+		"【必填项】姓名(name)、公司(company)、电话(phone)。三者齐了即可创建客户。\n" +
+		"【选填项】职位(position)、邮箱(email)、预算(budget)、意向(intent_level: High/Medium/Low)、备注(notes)。用户说了就记录，没说也可先创建再让用户后续补充。\n\n" +
+		"【规则】\n" +
+		"1. 用简短、友好的中文回复，一次可只问缺的必填项，或一次问多个（如「请说一下客户姓名、公司和电话」）。\n" +
+		"2. 用户可能一次说多条信息（如「张三，ABC公司，13800138000」），你必须识别并提取到对应字段。\n" +
+		"3. 若用户已提供选填项，一并确认并记录。\n" +
+		"4. 当必填项（姓名、公司、电话）全部齐了，回复中明确说「信息已齐，即将为您创建客户」或类似话术，并在末尾附上 JSON 块。\n" +
+		"5. 每次回复末尾必须附一个 JSON 块，格式为：\n" +
+		"```json\n" +
+		"{\"name\":\"\",\"company\":\"\",\"phone\":\"\",\"position\":\"\",\"email\":\"\",\"budget\":\"\",\"intent_level\":\"Medium\",\"notes\":\"\"}\n" +
+		"```\n" +
+		"只填你从对话中已确认的字段，未确认的留空字符串。intent_level 未提供时用 \"Medium\"。"
+
+	// 构建消息列表：system + 当前已收集的字段说明 + 对话历史
+	messages := make([]doubao.ChatMessage, 0, len(req.Messages)+2)
+
+	// 当前已收集的字段（供 AI 参考，避免重复问）
+	currentJSON, _ := json.Marshal(req.CurrentFields)
+	messages = append(messages, doubao.ChatMessage{
+		Role:    "system",
+		Content: systemPrompt + "\n\n【当前已收集的字段】\n" + string(currentJSON),
+	})
+
+	for _, m := range req.Messages {
+		if m.Role == "system" {
+			continue
+		}
+		messages = append(messages, doubao.ChatMessage{Role: m.Role, Content: m.Content})
+	}
+
+	resp, err := s.doubaoClient.Chat(messages)
+	if err != nil {
+		return nil, err
+	}
+	if len(resp.Choices) == 0 {
+		return nil, fmt.Errorf("no response from AI")
+	}
+
+	content := strings.TrimSpace(resp.Choices[0].Message.Content)
+	replyText, extracted := parseReplyAndExtractedFields(content)
+
+	// 合并当前字段与本次解析出的字段（解析出的非空值覆盖）
+	merged := make(map[string]string)
+	for k, v := range req.CurrentFields {
+		if v != "" {
+			merged[k] = v
+		}
+	}
+	for k, v := range extracted {
+		if v != "" {
+			merged[k] = v
+		}
+	}
+
+	canCreate := merged["name"] != "" && merged["company"] != "" && merged["phone"] != ""
+
+	return &dto.CustomerIntakeChatResponse{
+		Reply:          replyText,
+		ExtractedFields: merged,
+		CanCreate:      canCreate,
+	}, nil
+}
+
+// parseReplyAndExtractedFields 从 AI 回复中分离「用户看到的文案」和「末尾 JSON 块」中的字段
+func parseReplyAndExtractedFields(content string) (reply string, fields map[string]string) {
+	fields = make(map[string]string)
+	reply = content
+
+	// 查找 ```json ... ``` 块
+	jsonStart := strings.Index(content, "```json")
+	if jsonStart == -1 {
+		jsonStart = strings.Index(content, "```")
+	}
+	if jsonStart != -1 {
+		blockStart := jsonStart
+		if strings.HasPrefix(content[jsonStart:], "```json") {
+			blockStart += 7
+		} else {
+			blockStart += 3
+		}
+		rest := content[blockStart:]
+		jsonEnd := strings.Index(rest, "```")
+		if jsonEnd != -1 {
+			jsonStr := strings.TrimSpace(rest[:jsonEnd])
+			var m map[string]string
+			if err := json.Unmarshal([]byte(jsonStr), &m); err == nil {
+				for k, v := range m {
+					fields[k] = strings.TrimSpace(v)
+				}
+			}
+			reply = strings.TrimSpace(content[:jsonStart])
+		}
+	}
+	return reply, fields
+}
+
 // RecognizeBusinessCard 识别名片
 func (s *AIService) RecognizeBusinessCard(imageData []byte) (*dto.BusinessCardOCRResponse, error) {
 	jsonStr, err := s.doubaoClient.RecognizeBusinessCard(imageData)

@@ -5,6 +5,7 @@ export const translations = {
     // Layout
     dashboard: 'Dashboard',
     customers: 'Customers',
+    deals: 'Deals',
     scriptAssistant: 'Script Assistant',
     knowledgeBase: 'Knowledge Base',
     salesManager: 'Sales Manager',
@@ -28,7 +29,7 @@ export const translations = {
     revenueTrend: 'Revenue Trend',
     salesFunnel: 'Sales Funnel',
     recentActivity: 'Live Activity Feed',
-    deals: 'deals',
+    dealsLabel: 'deals',
     newLeadAssigned: 'New lead assigned',
     revenueVsTarget: 'Revenue vs Target',
     topDeals: 'Top Deals',
@@ -179,6 +180,7 @@ export const translations = {
     // Layout
     dashboard: '仪表盘',
     customers: '客户管理',
+    deals: '业绩管理',
     scriptAssistant: '话术助手',
     knowledgeBase: '知识库',
     salesManager: '销售经理',
@@ -202,7 +204,7 @@ export const translations = {
     revenueTrend: '收入趋势',
     salesFunnel: '销售漏斗',
     recentActivity: '实时动态',
-    deals: '个商机',
+    dealsLabel: '个商机',
     newLeadAssigned: '分配了新线索',
     revenueVsTarget: '收入 vs 目标',
     topDeals: '重点商机',

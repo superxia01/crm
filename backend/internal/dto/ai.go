@@ -63,3 +63,22 @@ type BusinessCardOCRResponse struct {
 	Confidence float64 `json:"confidence"`
 	RawText    string  `json:"raw_text,omitempty"` // 原始识别文本（当解析失败时）
 }
+
+// CustomerIntakeChatMessage 新建客户对话消息
+type CustomerIntakeChatMessage struct {
+	Role    string `json:"role"`    // user | assistant | system
+	Content string `json:"content"`
+}
+
+// CustomerIntakeChatRequest 新建客户对话请求（对接豆包）
+type CustomerIntakeChatRequest struct {
+	Messages      []CustomerIntakeChatMessage `json:"messages" binding:"required"`
+	CurrentFields map[string]string           `json:"current_fields"` // 当前已收集的字段，供 AI 参考
+}
+
+// CustomerIntakeChatResponse 新建客户对话响应
+type CustomerIntakeChatResponse struct {
+	Reply          string            `json:"reply"`           // AI 回复给用户看的文案
+	ExtractedFields map[string]string `json:"extracted_fields"` // 从对话中解析出的字段（与 current_fields 合并后前端更新表单）
+	CanCreate      bool              `json:"can_create"`       // 必填项是否已齐（姓名、公司、电话），可创建客户
+}

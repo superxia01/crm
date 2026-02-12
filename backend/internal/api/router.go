@@ -28,6 +28,7 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	knowledgeRepo := repository.NewKnowledgeRepository(db)
 	vectorRepo := repository.NewVectorRepository(db)
 	activityRepo := repository.NewActivityRepository(db)
+	dealRepo := repository.NewDealRepository(db)
 
 	// Initialize auth-center service
 	authCenterService := authcenter.NewService(&authcenter.Config{
@@ -70,6 +71,7 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	aiHandler := handler.NewAIHandler(aiService)
 	dashboardHandler := handler.NewDashboardHandler(customerRepo)
 	activityHandler := handler.NewActivityHandler(activityRepo, userRepo)
+	dealHandler := handler.NewDealHandler(service.NewDealService(dealRepo, customerRepo))
 	wechatAuthHandler := handler.NewWechatAuthHandler(authCenterService)
 
 	// Auth middleware
@@ -113,6 +115,16 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				activities.POST("", activityHandler.CreateActivity)
 			}
 
+			// Deal routes (业绩管理)
+			deals := protected.Group("/deals")
+			{
+				deals.POST("", dealHandler.CreateDeal)
+				deals.GET("", dealHandler.ListDeals)
+				deals.GET("/:id", dealHandler.GetDeal)
+				deals.PUT("/:id", dealHandler.UpdateDeal)
+				deals.DELETE("/:id", dealHandler.DeleteDeal)
+			}
+
 			// Customer routes
 			customers := protected.Group("/customers")
 			{
@@ -122,6 +134,9 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				customers.PUT("/:customerId", customerHandler.UpdateCustomer)
 				customers.DELETE("/:customerId", customerHandler.DeleteCustomer)
 				customers.POST("/:customerId/follow-up", customerHandler.IncrementFollowUp)
+
+				// Customer deals (业绩记录)
+				customers.GET("/:customerId/deals", dealHandler.ListDealsByCustomerID)
 
 				// Archive routes
 				customers.POST("/:customerId/archive", customerHandler.ArchiveCustomer)
@@ -166,6 +181,7 @@ func SetupRouter(db *gorm.DB, cfg *config.Config) *gin.Engine {
 				ai.POST("/knowledge/embed", aiHandler.GenerateEmbedding)
 				ai.POST("/speech-to-text", aiHandler.SpeechToText)
 				ai.POST("/ocr-card", aiHandler.OCRBusinessCard)
+				ai.POST("/customer-intake/chat", aiHandler.CustomerIntakeChat)
 			}
 		}
 	}

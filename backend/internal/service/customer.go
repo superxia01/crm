@@ -21,23 +21,38 @@ func NewCustomerService(customerRepo *repository.CustomerRepository) *CustomerSe
 // CreateCustomer creates a new customer
 func (s *CustomerService) CreateCustomer(userID uint64, req *dto.CreateCustomerRequest) (*dto.CustomerResponse, error) {
 	customer := &models.Customer{
-		UserID:            userID,
-		Name:              req.Name,
-		Company:           req.Company,
-		Position:          req.Position,
-		Phone:             req.Phone,
-		Email:             req.Email,
-		Industry:          req.Industry,
-		Budget:            req.Budget,
-		IntentLevel:       req.IntentLevel,
-		Stage:             req.Stage,
-		Source:            req.Source,
-		ContractValue:     req.ContractValue,
-		ContractStatus:    req.ContractStatus,
-		ExpectedCloseDate: req.ExpectedCloseDate,
-		Probability:       req.Probability,
-		AnnualRevenue:     req.AnnualRevenue,
-		Notes:             req.Notes,
+		UserID:             userID,
+		Name:               req.Name,
+		Company:            req.Company,
+		Position:           req.Position,
+		Phone:              req.Phone,
+		Email:              req.Email,
+		Industry:           req.Industry,
+		Budget:             req.Budget,
+		IntentLevel:        req.IntentLevel,
+		Stage:              req.Stage,
+		Source:             req.Source,
+		ContractValue:      req.ContractValue,
+		ContractStatus:     req.ContractStatus,
+		ExpectedCloseDate:  req.ExpectedCloseDate,
+		Probability:        req.Probability,
+		AnnualRevenue:      req.AnnualRevenue,
+		Notes:              req.Notes,
+		CustomerNo:         req.CustomerNo,
+		CustomerType:       req.CustomerType,
+		WechatID:           req.WechatID,
+		Address:            req.Address,
+		CompanyScale:       req.CompanyScale,
+		RegisteredCapital:  req.RegisteredCapital,
+		LegalPerson:        req.LegalPerson,
+		CreditCode:         req.CreditCode,
+		CustomerLevel:      req.CustomerLevel,
+		CustomerStatus:     req.CustomerStatus,
+		PotentialScore:    req.PotentialScore,
+		InvoiceTitle:      req.InvoiceTitle,
+		TaxNumber:         req.TaxNumber,
+		BankAccount:       req.BankAccount,
+		PaymentTerms:      req.PaymentTerms,
 	}
 
 	// Set defaults
@@ -166,6 +181,51 @@ func (s *CustomerService) UpdateCustomer(id, userID uint64, req *dto.UpdateCusto
 	if req.LastContact != nil {
 		customer.LastContact = req.LastContact
 	}
+	if req.CustomerNo != nil {
+		customer.CustomerNo = *req.CustomerNo
+	}
+	if req.CustomerType != nil {
+		customer.CustomerType = *req.CustomerType
+	}
+	if req.WechatID != nil {
+		customer.WechatID = *req.WechatID
+	}
+	if req.Address != nil {
+		customer.Address = *req.Address
+	}
+	if req.CompanyScale != nil {
+		customer.CompanyScale = *req.CompanyScale
+	}
+	if req.RegisteredCapital != nil {
+		customer.RegisteredCapital = *req.RegisteredCapital
+	}
+	if req.LegalPerson != nil {
+		customer.LegalPerson = *req.LegalPerson
+	}
+	if req.CreditCode != nil {
+		customer.CreditCode = *req.CreditCode
+	}
+	if req.CustomerLevel != nil {
+		customer.CustomerLevel = *req.CustomerLevel
+	}
+	if req.CustomerStatus != nil {
+		customer.CustomerStatus = *req.CustomerStatus
+	}
+	if req.PotentialScore != nil {
+		customer.PotentialScore = *req.PotentialScore
+	}
+	if req.InvoiceTitle != nil {
+		customer.InvoiceTitle = *req.InvoiceTitle
+	}
+	if req.TaxNumber != nil {
+		customer.TaxNumber = *req.TaxNumber
+	}
+	if req.BankAccount != nil {
+		customer.BankAccount = *req.BankAccount
+	}
+	if req.PaymentTerms != nil {
+		customer.PaymentTerms = *req.PaymentTerms
+	}
 
 	if err := s.customerRepo.Update(customer); err != nil {
 		return nil, err
@@ -286,10 +346,25 @@ func (s *CustomerService) toResponse(customer *models.Customer) *dto.CustomerRes
 		ExpectedCloseDate: customer.ExpectedCloseDate,
 		Probability:       customer.Probability,
 		AnnualRevenue:     customer.AnnualRevenue,
-		Notes:             customer.Notes,
-		LastContact:       customer.LastContact,
-		CreatedAt:         customer.CreatedAt,
-		UpdatedAt:         customer.UpdatedAt,
+		Notes:              customer.Notes,
+		LastContact:        customer.LastContact,
+		CustomerNo:         customer.CustomerNo,
+		CustomerType:       customer.CustomerType,
+		WechatID:           customer.WechatID,
+		Address:            customer.Address,
+		CompanyScale:       customer.CompanyScale,
+		RegisteredCapital: customer.RegisteredCapital,
+		LegalPerson:        customer.LegalPerson,
+		CreditCode:         customer.CreditCode,
+		CustomerLevel:      customer.CustomerLevel,
+		CustomerStatus:     customer.CustomerStatus,
+		PotentialScore:    customer.PotentialScore,
+		InvoiceTitle:       customer.InvoiceTitle,
+		TaxNumber:          customer.TaxNumber,
+		BankAccount:        customer.BankAccount,
+		PaymentTerms:       customer.PaymentTerms,
+		CreatedAt:          customer.CreatedAt,
+		UpdatedAt:          customer.UpdatedAt,
 	}
 }
 

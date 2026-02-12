@@ -27,6 +27,21 @@ export interface Customer {
   annual_revenue?: string;
   notes?: string;
   last_contact?: string;
+  customer_no?: string;
+  customer_type?: string;
+  wechat_id?: string;
+  address?: string;
+  company_scale?: string;
+  registered_capital?: string;
+  legal_person?: string;
+  credit_code?: string;
+  customer_level?: string;
+  customer_status?: string;
+  potential_score?: number;
+  invoice_title?: string;
+  tax_number?: string;
+  bank_account?: string;
+  payment_terms?: string;
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +63,21 @@ export interface CreateCustomerRequest {
   probability?: number;
   annual_revenue?: string;
   notes?: string;
+  customer_no?: string;
+  customer_type?: string;
+  wechat_id?: string;
+  address?: string;
+  company_scale?: string;
+  registered_capital?: string;
+  legal_person?: string;
+  credit_code?: string;
+  customer_level?: string;
+  customer_status?: string;
+  potential_score?: number;
+  invoice_title?: string;
+  tax_number?: string;
+  bank_account?: string;
+  payment_terms?: string;
 }
 
 export interface UpdateCustomerRequest {
@@ -71,6 +101,21 @@ export interface UpdateCustomerRequest {
   annual_revenue?: string;
   notes?: string;
   last_contact?: string;
+  customer_no?: string;
+  customer_type?: string;
+  wechat_id?: string;
+  address?: string;
+  company_scale?: string;
+  registered_capital?: string;
+  legal_person?: string;
+  credit_code?: string;
+  customer_level?: string;
+  customer_status?: string;
+  potential_score?: number;
+  invoice_title?: string;
+  tax_number?: string;
+  bank_account?: string;
+  payment_terms?: string;
 }
 
 export interface CustomerListParams {

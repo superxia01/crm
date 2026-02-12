@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, BookOpen, MessageSquareText, Search, Bell, Menu, Moon, Sun, Globe, LogOut, ChevronDown, User } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, MessageSquareText, Search, Bell, Menu, Moon, Sun, Globe, LogOut, ChevronDown, User, DollarSign } from 'lucide-react';
 import { useTheme, useLanguage, useAuth } from '../contexts';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -15,6 +15,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const navItems = [
     { label: t('dashboard'), path: '/', icon: LayoutDashboard },
     { label: t('customers'), path: '/customers', icon: Users },
+    { label: t('deals'), path: '/deals', icon: DollarSign },
     { label: t('scriptAssistant'), path: '/scripts', icon: MessageSquareText },
     { label: t('knowledgeBase'), path: '/knowledge', icon: BookOpen },
   ];

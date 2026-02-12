@@ -20,6 +20,22 @@ type CreateCustomerRequest struct {
 	Probability     int     `json:"probability"`
 	AnnualRevenue   string  `json:"annual_revenue"`
 	Notes           string  `json:"notes"`
+	// Extended
+	CustomerNo        string `json:"customer_no"`
+	CustomerType      string `json:"customer_type"`
+	WechatID          string `json:"wechat_id"`
+	Address           string `json:"address"`
+	CompanyScale      string `json:"company_scale"`
+	RegisteredCapital string `json:"registered_capital"`
+	LegalPerson       string `json:"legal_person"`
+	CreditCode        string `json:"credit_code"`
+	CustomerLevel     string `json:"customer_level"`
+	CustomerStatus    string `json:"customer_status"`
+	PotentialScore    int    `json:"potential_score"`
+	InvoiceTitle      string `json:"invoice_title"`
+	TaxNumber         string `json:"tax_number"`
+	BankAccount       string `json:"bank_account"`
+	PaymentTerms      string `json:"payment_terms"`
 }
 
 // UpdateCustomerRequest represents a request to update a customer
@@ -44,6 +60,21 @@ type UpdateCustomerRequest struct {
 	AnnualRevenue    *string  `json:"annual_revenue"`
 	Notes            *string  `json:"notes"`
 	LastContact      *time.Time `json:"last_contact"`
+	CustomerNo        *string `json:"customer_no"`
+	CustomerType      *string `json:"customer_type"`
+	WechatID          *string `json:"wechat_id"`
+	Address           *string `json:"address"`
+	CompanyScale      *string `json:"company_scale"`
+	RegisteredCapital *string `json:"registered_capital"`
+	LegalPerson       *string `json:"legal_person"`
+	CreditCode        *string `json:"credit_code"`
+	CustomerLevel     *string `json:"customer_level"`
+	CustomerStatus    *string `json:"customer_status"`
+	PotentialScore    *int    `json:"potential_score"`
+	InvoiceTitle      *string `json:"invoice_title"`
+	TaxNumber         *string `json:"tax_number"`
+	BankAccount       *string `json:"bank_account"`
+	PaymentTerms      *string `json:"payment_terms"`
 }
 
 // CustomerQuery represents query parameters for listing customers
@@ -83,6 +114,21 @@ type CustomerResponse struct {
 	AnnualRevenue    string     `json:"annual_revenue"`
 	Notes            string     `json:"notes"`
 	LastContact      *time.Time `json:"last_contact"`
-	CreatedAt        time.Time  `json:"created_at"`
-	UpdatedAt        time.Time  `json:"updated_at"`
+	CustomerNo        string   `json:"customer_no"`
+	CustomerType      string   `json:"customer_type"`
+	WechatID          string   `json:"wechat_id"`
+	Address           string   `json:"address"`
+	CompanyScale      string   `json:"company_scale"`
+	RegisteredCapital string   `json:"registered_capital"`
+	LegalPerson       string   `json:"legal_person"`
+	CreditCode        string   `json:"credit_code"`
+	CustomerLevel     string   `json:"customer_level"`
+	CustomerStatus    string   `json:"customer_status"`
+	PotentialScore    int      `json:"potential_score"`
+	InvoiceTitle      string   `json:"invoice_title"`
+	TaxNumber         string   `json:"tax_number"`
+	BankAccount       string   `json:"bank_account"`
+	PaymentTerms      string   `json:"payment_terms"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }

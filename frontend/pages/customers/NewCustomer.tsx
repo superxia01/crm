@@ -18,6 +18,7 @@ export const NewCustomer: React.FC = () => {
     position: '',
     phone: '',
     email: '',
+    wechat_id: '',
     budget: '',
     intent_level: 'Medium',
     notes: '',
@@ -27,15 +28,13 @@ export const NewCustomer: React.FC = () => {
 
   // Chat State（真 AI：豆包）
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user' | 'ai'; text: string }>>([
-    { id: '1', role: 'ai', text: '你好！我可以帮你快速注册新客户。你可以直接说出或输入客户信息（姓名、公司、电话为必填），我会尽量少问几轮就帮你填齐。' }
+    { id: '1', role: 'ai', text: '你好！我可以帮你快速录入客户信息。请告诉我客户的姓名、公司和联系方式（电话/邮箱/微信号任选其一），我会引导你完成信息收集。' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [createSuccessTip, setCreateSuccessTip] = useState<string | null>(null); // 创建成功后提示可补充选填项
-
-  // 进度：必填项 姓名、公司、电话 已填数量 / 3 * 100
-  const requiredFilled = [formData.name?.trim(), formData.company?.trim(), formData.phone?.trim()].filter(Boolean).length;
-  const chatProgressPercent = Math.round((requiredFilled / 3) * 100);
+  const [chatStatus, setChatStatus] = useState<'collecting' | 'ready_for_confirmation'>('collecting');
+  const [customerSummary, setCustomerSummary] = useState<string | null>(null); // AI 生成的信息总结
+  const [isCreatingFromChat, setIsCreatingFromChat] = useState(false);
 
   // Voice State
   const [isRecording, setIsRecording] = useState(false);
@@ -51,9 +50,13 @@ export const NewCustomer: React.FC = () => {
   };
 
   const handleSave = async () => {
-    // Validation
-    if (!formData.name || !formData.company || !formData.phone) {
-      setError('请填写必填字段（姓名、公司、电话）');
+    // Validation: name, company 必填，phone/email/wechat_id 至少一个
+    if (!formData.name || !formData.company) {
+      setError('请填写必填字段（姓名、公司）');
+      return;
+    }
+    if (!formData.phone && !formData.email && !formData.wechat_id) {
+      setError('请至少填写一种联系方式（电话、邮箱或微信号）');
       return;
     }
 
@@ -62,6 +65,7 @@ export const NewCustomer: React.FC = () => {
 
     try {
       await customerService.createCustomer(formData);
+      showSuccess('客户创建成功！');
       navigate('/customers');
     } catch (err) {
       console.error('Failed to create customer:', err);
@@ -70,7 +74,7 @@ export const NewCustomer: React.FC = () => {
     }
   };
 
-  // --- Chat Logic：对接豆包，引导填必填项，收齐后创建客户 ---
+  // --- Chat Logic：对接豆包，引导用户收集信息，最后给出总结等待确认 ---
   const handleSendMessage = async () => {
     const text = inputMessage.trim();
     if (!text) return;
@@ -80,7 +84,6 @@ export const NewCustomer: React.FC = () => {
     setInputMessage('');
     setIsTyping(true);
     setError(null);
-    setCreateSuccessTip(null);
 
     try {
       const apiMessages = messages.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user' as const, content: m.text }));
@@ -90,8 +93,9 @@ export const NewCustomer: React.FC = () => {
         name: formData.name || '',
         company: formData.company || '',
         phone: formData.phone || '',
-        position: formData.position || '',
         email: formData.email || '',
+        wechat_id: formData.wechat_id || '',
+        position: formData.position || '',
         budget: formData.budget || '',
         intent_level: formData.intent_level || 'Medium',
         notes: formData.notes || '',
@@ -102,28 +106,17 @@ export const NewCustomer: React.FC = () => {
         current_fields: currentFields,
       });
 
+      // 更新状态
+      setChatStatus(res.status);
+      setCustomerSummary(res.summary || null);
+
+      // 更新消息
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: res.reply }]);
 
+      // 更新表单数据
       const merged = { ...formData, ...res.extracted_fields };
       if (merged.intent_level === '') merged.intent_level = 'Medium';
       setFormData(merged);
-
-      if (res.can_create) {
-        const createPayload: CreateCustomerRequest = {
-          name: merged.name,
-          company: merged.company,
-          phone: merged.phone,
-          position: merged.position || undefined,
-          email: merged.email || undefined,
-          budget: merged.budget || undefined,
-          intent_level: merged.intent_level || 'Medium',
-          notes: merged.notes || undefined,
-        };
-        await customerService.createCustomer(createPayload);
-        showSuccess('客户已创建');
-        setCreateSuccessTip('您还可以在客户详情中补充：职位、邮箱、预算、意向、备注等选填项。');
-        setTimeout(() => navigate('/customers'), 2000);
-      }
     } catch (err) {
       console.error('AI 对话失败:', err);
       setError(handleApiError(err));
@@ -131,6 +124,53 @@ export const NewCustomer: React.FC = () => {
     } finally {
       setIsTyping(false);
     }
+  };
+
+  // --- 确认并创建客户 ---
+  const handleConfirmAndCreate = async () => {
+    setIsCreatingFromChat(true);
+    setError(null);
+
+    try {
+      const createPayload: CreateCustomerRequest = {
+        name: formData.name,
+        company: formData.company,
+        phone: formData.phone,
+        position: formData.position || undefined,
+        email: formData.email || undefined,
+        budget: formData.budget || undefined,
+        intent_level: formData.intent_level || 'Medium',
+        notes: formData.notes || undefined,
+      };
+
+      await customerService.createCustomer(createPayload);
+      showSuccess('客户创建成功！');
+      setTimeout(() => navigate('/customers'), 1500);
+    } catch (err) {
+      console.error('创建客户失败:', err);
+      setError(handleApiError(err));
+    } finally {
+      setIsCreatingFromChat(false);
+    }
+  };
+
+  // --- 继续编辑（用户想修改信息）---
+  const handleContinueEditing = () => {
+    setChatStatus('collecting');
+    setCustomerSummary(null);
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'ai',
+      text: `好的，你可以：
+
+📝 补充信息：如"补充一下职位是CTO"、"邮箱是zhangsan@abc.com"
+
+✏️ 修改信息：如"把姓名改成李四"、"电话错了，应该是13900139000"
+
+💡 快速完成：如果信息没问题，你可以点击「确认创建」按钮
+
+请告诉我你需要修改或补充的内容。`
+    }]);
   };
 
   // --- Voice Recording Logic ---
@@ -268,8 +308,15 @@ export const NewCustomer: React.FC = () => {
 
             <Input label={t('position')} name="position" value={formData.position} onChange={handleInputChange} placeholder="例如：CTO" />
             <Input label={t('email')} name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="例如：zhangsan@company.com" />
-            <Input label={t('phone')} name="phone" value={formData.phone} onChange={handleInputChange} placeholder="例如：13800138000" required />
+            <Input label={t('phone')} name="phone" value={formData.phone} onChange={handleInputChange} placeholder="例如：13800138000" />
+            <Input label="微信号" name="wechat_id" value={formData.wechat_id || ''} onChange={handleInputChange} placeholder="例如：abc123" />
             <Input label={t('budgetEstimate')} name="budget" value={formData.budget} onChange={handleInputChange} placeholder="例如：¥50,000" />
+
+            <div className="md:col-span-2">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                * 联系方式至少填写一种（电话/邮箱/微信号）
+              </p>
+            </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('intentLevel')}</label>
@@ -360,25 +407,19 @@ export const NewCustomer: React.FC = () => {
       )}
 
       {mode === 'chat' && (
-        <Card className="h-[600px] max-h-[calc(100vh-10rem)] flex flex-col p-0 overflow-hidden min-h-0">
-          {/* Progress：必填项 姓名、公司、电话 填齐即 100% */}
+        <Card className="h-[650px] max-h-[calc(100vh-10rem)] flex flex-col p-0 overflow-hidden min-h-0">
+          {/* Header: AI 状态指示 */}
           <div className="shrink-0 bg-blue-50 dark:bg-blue-900/20 px-6 py-3 border-b border-blue-100 dark:border-blue-800 flex items-center justify-between">
-            <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">{t('aiAssistantActive')}</span>
-            <div className="flex items-center space-x-1">
-              <span className="text-xs text-blue-600 dark:text-blue-400">{chatProgressPercent}% {t('complete')}</span>
-              <div className="w-20 h-1.5 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-500 transition-all duration-500"
-                  style={{ width: `${chatProgressPercent}%` }}
-                ></div>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Bot size={16} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                {chatStatus === 'collecting' ? '收集中' : '等待确认'}
+              </span>
             </div>
+            <button onClick={() => setMode('form')} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+              切换到表单
+            </button>
           </div>
-          {createSuccessTip && (
-            <div className="shrink-0 px-6 py-2 bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 text-sm text-green-700 dark:text-green-300">
-              {createSuccessTip}
-            </div>
-          )}
 
           {/* Messages: min-h-0 lets flex child shrink so overflow-y-auto can scroll */}
           <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-slate-900/50">
@@ -388,7 +429,7 @@ export const NewCustomer: React.FC = () => {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mx-2 ${msg.role === 'ai' ? 'bg-primary text-white' : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-200'}`}>
                     {msg.role === 'ai' ? <Bot size={16} /> : <User size={16} />}
                   </div>
-                  <div className={`p-3 rounded-2xl text-sm ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 shadow-sm rounded-tl-none'}`}>
+                  <div className={`p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 shadow-sm rounded-tl-none'}`}>
                     {msg.text}
                   </div>
                 </div>
@@ -412,33 +453,64 @@ export const NewCustomer: React.FC = () => {
             )}
           </div>
 
-          {/* Input: 仅文字输入 + 发送，无录音 */}
-          <div className="shrink-0 p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder={t('typeAnswer')}
-                className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-900 dark:text-slate-100"
-              />
-              <Button onClick={handleSendMessage} disabled={!inputMessage.trim()}>
-                <Send size={18} />
-              </Button>
+          {/* 总结和确认区域 */}
+          {chatStatus === 'ready_for_confirmation' && customerSummary && (
+            <div className="shrink-0 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-t border-blue-200 dark:border-blue-800">
+              <div className="bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border border-blue-100 dark:border-blue-800">
+                <div className="flex items-center space-x-2 mb-3">
+                  <CheckCircle2 size={18} className="text-green-500" />
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">信息收集完成</span>
+                </div>
+                <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono bg-slate-50 dark:bg-slate-900 p-3 rounded mb-4">
+                  {customerSummary}
+                </pre>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleConfirmAndCreate}
+                    disabled={isCreatingFromChat}
+                    className="flex-1"
+                  >
+                    {isCreatingFromChat ? (
+                      <>
+                        <Loader2 className="animate-spin mr-2" size={18} /> 创建中...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 size={18} className="mr-2" /> 确认创建
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleContinueEditing}
+                    disabled={isCreatingFromChat}
+                  >
+                    继续编辑
+                  </Button>
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="mt-2 flex justify-between items-center">
-              <button onClick={() => setMode('form')} className="text-xs text-slate-500 hover:text-primary hover:underline dark:text-slate-400 dark:hover:text-primary">
-                {t('switchToManual')}
-              </button>
-              {chatProgressPercent === 100 && (
-                <Button variant="ghost" className="text-xs h-6" onClick={() => setMode('form')}>
-                  {t('reviewSave')}
+          {/* Input: 仅在收集中状态显示 */}
+          {chatStatus === 'collecting' && (
+            <div className="shrink-0 p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="输入客户信息..."
+                  disabled={isTyping}
+                  className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-900 dark:text-slate-100 disabled:opacity-50"
+                />
+                <Button onClick={handleSendMessage} disabled={!inputMessage.trim() || isTyping}>
+                  <Send size={18} />
                 </Button>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </Card>
       )}
     </div>

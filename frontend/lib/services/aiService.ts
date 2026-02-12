@@ -84,7 +84,8 @@ export interface CustomerIntakeChatRequest {
 export interface CustomerIntakeChatResponse {
   reply: string;
   extracted_fields: Record<string, string>;
-  can_create: boolean;
+  status: 'collecting' | 'ready_for_confirmation';
+  summary?: string;
 }
 
 class AIService {

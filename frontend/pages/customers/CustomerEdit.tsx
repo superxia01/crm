@@ -1,19 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, MessageSquare, List, Send, Bot, User, CheckCircle2 } from 'lucide-react';
 import { Card, Button, Input, Badge } from '../../components/UI';
+import { aiService } from '../../lib/services/aiService';
 import { customerService, Customer, UpdateCustomerRequest } from '../../lib/services/customerService';
-import { useLanguage } from '../../contexts';
+import { useLanguage, useToast } from '../../contexts';
 import { handleApiError } from '../../lib/apiClient';
 
 export const CustomerEdit: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { t } = useLanguage();
+  const { showSuccess } = useToast();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 编辑模式：form 或 chat
+  const [editMode, setEditMode] = useState<'form' | 'chat'>('form');
+
+  // AI Chat 状态
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; role: 'user' | 'ai'; text: string }>>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [isUpdatingFromChat, setIsUpdatingFromChat] = useState(false);
 
   // Form data with all editable fields
   const [formData, setFormData] = useState<UpdateCustomerRequest>({
@@ -123,9 +134,13 @@ export const CustomerEdit: React.FC = () => {
   const handleSave = async () => {
     if (!customer) return;
 
-    // Validation
-    if (!formData.name || !formData.company || !formData.phone) {
-      setError('请填写必填字段（姓名、公司、电话）');
+    // Validation: name, company 必填，phone/email/wechat_id 至少一个
+    if (!formData.name || !formData.company) {
+      setError('请填写必填字段（姓名、公司）');
+      return;
+    }
+    if (!formData.phone && !formData.email && !formData.wechat_id) {
+      setError('请至少填写一种联系方式（电话、邮箱或微信号）');
       return;
     }
 
@@ -134,11 +149,118 @@ export const CustomerEdit: React.FC = () => {
 
     try {
       await customerService.updateCustomer(customer.id, formData);
+      showSuccess('客户信息更新成功！');
       navigate(`/customers/${customer.id}`);
     } catch (err) {
       console.error('Failed to update customer:', err);
       setError(handleApiError(err));
       setIsSubmitting(false);
+    }
+  };
+
+  // --- AI Chat 编辑相关函数 ---
+
+  // 初始化 Chat 模式
+  const initChatMode = () => {
+    if (!customer) return;
+
+    setChatMessages([{
+      id: '1',
+      role: 'ai',
+      text: `你好！我可以帮你编辑客户信息。
+
+当前客户信息：
+姓名：${customer.name}
+公司：${customer.company}
+职位：${customer.position || '未填写'}
+电话：${customer.phone || '未填写'}
+邮箱：${customer.email || '未填写'}
+微信号：${customer.wechat_id || '未填写'}
+
+📝 你可以说：
+- "把姓名改成李四"
+- "补充一下邮箱是 xxx@xxx.com"
+- "电话错了，应该是 13900139000"
+
+请告诉我需要修改或补充的内容。`
+    }]);
+  };
+
+  // 切换到 Chat 模式
+  const handleSwitchToChat = () => {
+    initChatMode();
+    setEditMode('chat');
+    setError(null);
+  };
+
+  // Chat 模式发送消息
+  const handleChatSend = async () => {
+    if (!customer) return;
+    const text = inputMessage.trim();
+    if (!text) return;
+
+    const userMsg = { id: Date.now().toString(), role: 'user' as const, text };
+    setChatMessages(prev => [...prev, userMsg]);
+    setInputMessage('');
+    setIsTyping(true);
+    setError(null);
+
+    try {
+      // 构建当前字段
+      const currentFields: Record<string, string> = {
+        name: formData.name || '',
+        company: formData.company || '',
+        phone: formData.phone || '',
+        email: formData.email || '',
+        wechat_id: formData.wechat_id || '',
+        position: formData.position || '',
+        budget: formData.budget || '',
+        intent_level: formData.intent_level || 'Medium',
+        notes: formData.notes || '',
+      };
+
+      const apiMessages = chatMessages
+        .filter(m => m.role !== 'ai' || m.id !== '1') // 移除初始化消息
+        .map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user' as const, content: m.text }));
+      apiMessages.push({ role: 'user' as const, content: text });
+
+      const res = await aiService.customerIntakeChat({
+        messages: apiMessages,
+        current_fields: currentFields,
+      });
+
+      // 更新消息
+      setChatMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: res.reply }]);
+
+      // 更新表单数据
+      const merged = { ...formData, ...res.extracted_fields };
+      if (merged.intent_level === '') merged.intent_level = 'Medium';
+      setFormData(merged);
+    } catch (err) {
+      console.error('AI 编辑失败:', err);
+      setError(handleApiError(err));
+      setChatMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: '抱歉，处理失败了，请重试或切换到表单模式。' }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  // Chat 模式保存更改
+  const handleChatSave = async () => {
+    if (!customer) return;
+
+    setIsUpdatingFromChat(true);
+    setError(null);
+
+    try {
+      await customerService.updateCustomer(customer.id, formData);
+      showSuccess('客户信息更新成功！');
+      navigate(`/customers/${customer.id}`);
+    } catch (err) {
+      console.error('更新客户失败:', err);
+      setError(handleApiError(err));
+    } finally {
+      setIsUpdatingFromChat(false);
     }
   };
 
@@ -196,6 +318,26 @@ export const CustomerEdit: React.FC = () => {
         )}
       </div>
 
+      {/* 模式切换 */}
+      <div className="flex justify-center">
+        <div className="bg-white dark:bg-slate-800 p-1 rounded-lg border border-gray-200 dark:border-slate-700 flex gap-1">
+          <button
+            onClick={() => setEditMode('form')}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${editMode === 'form' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}
+          >
+            <List size={16} className="mr-2" /> 表单编辑
+          </button>
+          <button
+            onClick={handleSwitchToChat}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${editMode === 'chat' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700'}`}
+          >
+            <MessageSquare size={16} className="mr-2" /> AI 智能编辑
+          </button>
+        </div>
+      </div>
+
+      {/* 表单编辑模式 */}
+      {editMode === 'form' && (
       <Card>
         {error && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -491,6 +633,96 @@ export const CustomerEdit: React.FC = () => {
           </Button>
         </div>
       </Card>
+      )}
+
+      {/* AI Chat 编辑模式 */}
+      {editMode === 'chat' && (
+        <Card className="h-[650px] max-h-[calc(100vh-10rem)] flex flex-col p-0 overflow-hidden min-h-0">
+          {/* Header */}
+          <div className="shrink-0 bg-blue-50 dark:bg-blue-900/20 px-6 py-3 border-b border-blue-100 dark:border-blue-800 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Bot size={16} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                AI 智能编辑
+              </span>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-slate-900/50">
+            {chatMessages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`flex items-start max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mx-2 ${msg.role === 'ai' ? 'bg-primary text-white' : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-200'}`}>
+                    {msg.role === 'ai' ? <Bot size={16} /> : <User size={16} />}
+                  </div>
+                  <div className={`p-3 rounded-2xl text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-primary text-white rounded-tr-none' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 shadow-sm rounded-tl-none'}`}>
+                    {msg.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="flex items-start">
+                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 mx-2">
+                    <Bot size={16} />
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 px-4 py-3 rounded-2xl rounded-tl-none border border-gray-200 dark:border-slate-700 shadow-sm">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gray-300 dark:bg-gray-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-300 dark:bg-gray-500 rounded-full animate-bounce delay-75"></div>
+                      <div className="w-2 h-2 bg-gray-300 dark:bg-gray-500 rounded-full animate-bounce delay-150"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input & Actions */}
+          <div className="shrink-0 p-4 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleChatSend()}
+                placeholder="输入需要修改的内容，如：把姓名改成李四"
+                disabled={isTyping}
+                className="flex-1 px-4 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-slate-900 dark:text-slate-100 disabled:opacity-50"
+              />
+              <Button onClick={handleChatSend} disabled={!inputMessage.trim() || isTyping}>
+                <Send size={18} />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setEditMode('form')}
+                className="flex-1"
+              >
+                切换到表单
+              </Button>
+              <Button
+                onClick={handleChatSave}
+                disabled={isUpdatingFromChat}
+                className="flex-1"
+              >
+                {isUpdatingFromChat ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={18} /> 保存中...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} className="mr-2" /> 保存更改
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

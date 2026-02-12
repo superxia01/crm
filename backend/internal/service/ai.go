@@ -235,37 +235,58 @@ func (s *AIService) SpeechToText(audioData []byte, format, language string) (*dt
 	}, nil
 }
 
-// CustomerIntakeChat 新建客户对话（豆包）：引导用户用最少轮次填齐必填项，返回回复 + 解析出的字段 + 是否可创建
+// CustomerIntakeChat 新建客户对话（豆包）：引导用户收集所有信息，最后给出总结等待用户确认
 func (s *AIService) CustomerIntakeChat(req *dto.CustomerIntakeChatRequest) (*dto.CustomerIntakeChatResponse, error) {
-	const (
-		requiredFields = "name, company, phone" // 必填：姓名、公司、电话
-		optionalFields = "position, email, budget, intent_level, notes"
-	)
+	systemPrompt := `你是「新建客户」助手，帮助用户快速完成客户信息录入。
 
-	systemPrompt := "你是「新建客户」助手，帮助用户在最少轮次内完成客户信息录入。\n\n" +
-		"【必填项】姓名(name)、公司(company)、电话(phone)。三者齐了即可创建客户。\n" +
-		"【选填项】职位(position)、邮箱(email)、预算(budget)、意向(intent_level: High/Medium/Low)、备注(notes)。用户说了就记录，没说也可先创建再让用户后续补充。\n\n" +
-		"【规则】\n" +
-		"1. 用简短、友好的中文回复，一次可只问缺的必填项，或一次问多个（如「请说一下客户姓名、公司和电话」）。\n" +
-		"2. 用户可能一次说多条信息（如「张三，ABC公司，13800138000」），你必须识别并提取到对应字段。\n" +
-		"3. 若用户已提供选填项，一并确认并记录。\n" +
-		"4. 当必填项（姓名、公司、电话）全部齐了，回复中明确说「信息已齐，即将为您创建客户」或类似话术，并在末尾附上 JSON 块。\n" +
-		"5. 每次回复末尾必须附一个 JSON 块，格式为：\n" +
-		"```json\n" +
-		"{\"name\":\"\",\"company\":\"\",\"phone\":\"\",\"position\":\"\",\"email\":\"\",\"budget\":\"\",\"intent_level\":\"Medium\",\"notes\":\"\"}\n" +
-		"```\n" +
-		"只填你从对话中已确认的字段，未确认的留空字符串。intent_level 未提供时用 \"Medium\"。"
+【必填项】姓名(name)、公司(company)
+【联系方式至少填一个】电话(phone)、邮箱(email)、微信号(wechat_id) - 三选一即可
+【选填项】职位(position)、预算(budget)、意向等级(intent_level: High/Medium/Low)、备注(notes)
 
-	// 构建消息列表：system + 当前已收集的字段说明 + 对话历史
+【工作流程】
+1. 用简短友好的中文引导用户，优先收集：姓名、公司、联系方式（电话/邮箱/微信号任选其一）
+2. 用户可能一次性说多条信息（如"张三，ABC科技公司，微信abc123"），请准确提取到对应字段
+3. 尽量在一次对话中收集所有信息（包括选填项），可以主动询问选填项
+4. **支持修改和补充**：用户可以说"把姓名改成李四"、"补充一下邮箱是xxx@xxx.com"、"电话错了，应该是13900139000"，请正确更新对应字段
+5. 当必填项（姓名、公司）和至少一种联系方式都收集完成后，生成一份信息总结，格式如下：
+
+━━━━━━━━━━━━━━━━━━
+📋 客户信息确认
+━━━━━━━━━━━━━━━━━━
+姓名：张三
+公司：ABC科技公司
+职位：CTO
+电话：13800138000
+邮箱：zhangsan@abc.com
+微信号：abc123
+预算：¥50,000
+意向等级：High
+备注：有意向采购CRM系统
+━━━━━━━━━━━━━━━━━━
+
+请确认以上信息是否正确？回复"确认"即可创建客户。
+
+5. 在总结之后，附加一个 JSON 块（用于系统处理）：
+```json
+{"status":"ready_for_confirmation","name":"张三","company":"ABC科技公司","position":"CTO","phone":"13800138000","email":"zhangsan@abc.com","wechat_id":"abc123","budget":"¥50,000","intent_level":"High","notes":"有意向采购CRM系统"}
+```
+
+【JSON 格式说明】
+- status: "collecting"（收集中）或 "ready_for_confirmation"（等待确认）
+- 当姓名、公司和至少一种联系方式（phone/email/wechat_id）都收集完成时，status 设为 "ready_for_confirmation"
+- 只填已确认的字段，未确认的留空字符串 ""`
+
+	// 构建消息列表
 	messages := make([]doubao.ChatMessage, 0, len(req.Messages)+2)
 
-	// 当前已收集的字段（供 AI 参考，避免重复问）
+	// 当前已收集的字段（供 AI 参考）
 	currentJSON, _ := json.Marshal(req.CurrentFields)
 	messages = append(messages, doubao.ChatMessage{
 		Role:    "system",
 		Content: systemPrompt + "\n\n【当前已收集的字段】\n" + string(currentJSON),
 	})
 
+	// 添加对话历史
 	for _, m := range req.Messages {
 		if m.Role == "system" {
 			continue
@@ -273,6 +294,7 @@ func (s *AIService) CustomerIntakeChat(req *dto.CustomerIntakeChatRequest) (*dto
 		messages = append(messages, doubao.ChatMessage{Role: m.Role, Content: m.Content})
 	}
 
+	// 调用豆包 API
 	resp, err := s.doubaoClient.Chat(messages)
 	if err != nil {
 		return nil, err
@@ -282,9 +304,11 @@ func (s *AIService) CustomerIntakeChat(req *dto.CustomerIntakeChatRequest) (*dto
 	}
 
 	content := strings.TrimSpace(resp.Choices[0].Message.Content)
-	replyText, extracted := parseReplyAndExtractedFields(content)
 
-	// 合并当前字段与本次解析出的字段（解析出的非空值覆盖）
+	// 解析 AI 响应：提取用户看到的文案和 JSON 数据
+	replyText, extracted, status := parseChatResponse(content)
+
+	// 合并字段
 	merged := make(map[string]string)
 	for k, v := range req.CurrentFields {
 		if v != "" {
@@ -297,18 +321,50 @@ func (s *AIService) CustomerIntakeChat(req *dto.CustomerIntakeChatRequest) (*dto
 		}
 	}
 
-	canCreate := merged["name"] != "" && merged["company"] != "" && merged["phone"] != ""
+	// ===== 后端验证：修正 AI 返回的状态 =====
+	// 必填字段：姓名、公司
+	requiredFields := []string{"name", "company"}
+	requiredFieldsFilled := true
+	for _, field := range requiredFields {
+		if merged[field] == "" {
+			requiredFieldsFilled = false
+			break
+		}
+	}
+
+	// 联系方式至少填一个：phone / email / wechat_id
+	contactMethodFilled := merged["phone"] != "" || merged["email"] != "" || merged["wechat_id"] != ""
+
+	// 判断是否可以进入确认阶段：必填项 + 至少一种联系方式
+	allReady := requiredFieldsFilled && contactMethodFilled
+
+	// 如果条件满足但 AI 状态仍是 collecting，修正为 ready_for_confirmation
+	if allReady && status == "collecting" {
+		status = "ready_for_confirmation"
+	}
+	// 如果条件不满足但 AI 状态是 ready_for_confirmation，修正为 collecting
+	if !allReady && status == "ready_for_confirmation" {
+		status = "collecting"
+	}
+
+	// 生成总结（当状态为等待确认时）
+	var summary string
+	if status == "ready_for_confirmation" {
+		summary = generateCustomerSummary(merged)
+	}
 
 	return &dto.CustomerIntakeChatResponse{
-		Reply:          replyText,
+		Reply:           replyText,
 		ExtractedFields: merged,
-		CanCreate:      canCreate,
+		Status:          status,
+		Summary:         summary,
 	}, nil
 }
 
-// parseReplyAndExtractedFields 从 AI 回复中分离「用户看到的文案」和「末尾 JSON 块」中的字段
-func parseReplyAndExtractedFields(content string) (reply string, fields map[string]string) {
+// parseChatResponse 从 AI 回复中解析用户文案、提取的字段和状态
+func parseChatResponse(content string) (reply string, fields map[string]string, status string) {
 	fields = make(map[string]string)
+	status = "collecting" // 默认状态
 	reply = content
 
 	// 查找 ```json ... ``` 块
@@ -332,11 +388,48 @@ func parseReplyAndExtractedFields(content string) (reply string, fields map[stri
 				for k, v := range m {
 					fields[k] = strings.TrimSpace(v)
 				}
+				// 提取状态
+				if s, ok := m["status"]; ok {
+					status = s
+				}
 			}
 			reply = strings.TrimSpace(content[:jsonStart])
 		}
 	}
-	return reply, fields
+	return reply, fields, status
+}
+
+// generateCustomerSummary 生成客户信息总结
+func generateCustomerSummary(fields map[string]string) string {
+	var sb strings.Builder
+	sb.WriteString("━━━━━━━━━━━━━━━━━━\n")
+	sb.WriteString("📋 客户信息确认\n")
+	sb.WriteString("━━━━━━━━━━━━━━━━━━\n")
+
+	fieldLabels := map[string]string{
+		"name":         "姓名",
+		"company":      "公司",
+		"position":     "职位",
+		"phone":        "电话",
+		"email":        "邮箱",
+		"wechat_id":    "微信号",
+		"budget":       "预算",
+		"intent_level": "意向等级",
+		"notes":        "备注",
+	}
+
+	for _, key := range []string{"name", "company", "position", "phone", "email", "wechat_id", "budget", "intent_level", "notes"} {
+		if val := fields[key]; val != "" {
+			sb.WriteString(fieldLabels[key])
+			sb.WriteString("：")
+			sb.WriteString(val)
+			sb.WriteString("\n")
+		}
+	}
+
+	sb.WriteString("━━━━━━━━━━━━━━━━━━\n")
+	sb.WriteString("请确认以上信息是否正确？点击「确认创建」按钮即可创建客户。")
+	return sb.String()
 }
 
 // RecognizeBusinessCard 识别名片

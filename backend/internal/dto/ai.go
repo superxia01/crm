@@ -78,7 +78,20 @@ type CustomerIntakeChatRequest struct {
 
 // CustomerIntakeChatResponse 新建客户对话响应
 type CustomerIntakeChatResponse struct {
-	Reply          string            `json:"reply"`           // AI 回复给用户看的文案
-	ExtractedFields map[string]string `json:"extracted_fields"` // 从对话中解析出的字段（与 current_fields 合并后前端更新表单）
-	CanCreate      bool              `json:"can_create"`       // 必填项是否已齐（姓名、公司、电话），可创建客户
+	Reply            string            `json:"reply"`             // AI 回复给用户看的文案
+	ExtractedFields  map[string]string `json:"extracted_fields"`  // 从对话中解析出的字段
+	Status           string            `json:"status"`            // collecting: 收集中, ready_for_confirmation: 等待确认
+	Summary          string            `json:"summary,omitempty"` // AI 生成的信息总结（当 status=ready_for_confirmation 时）
+}
+
+// CreateCustomerFromChatRequest 从 AI 对话创建客户的请求
+type CreateCustomerFromChatRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Company     string `json:"company" binding:"required"`
+	Phone       string `json:"phone" binding:"required"`
+	Position    string `json:"position"`
+	Email       string `json:"email"`
+	Budget      string `json:"budget"`
+	IntentLevel string `json:"intent_level"`
+	Notes       string `json:"notes"`
 }

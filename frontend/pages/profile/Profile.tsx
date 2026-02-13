@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, LogOut, ArrowLeft } from 'lucide-react';
 import { Card, Button, Input } from '../../components/UI';
-import { useAuth, useToast } from '../../contexts';
+import { useAuth, useToast, useLanguage } from '../../contexts';
 
 export const Profile: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout, customTitle, setCustomTitle } = useAuth();
   const { showSuccess } = useToast();
+  const { t } = useLanguage();
   const [titleInput, setTitleInput] = useState(customTitle || (user as any)?.role || '');
   const [titleSaved, setTitleSaved] = useState(false);
 
@@ -20,7 +21,7 @@ export const Profile: React.FC = () => {
   const handleSaveTitle = () => {
     setCustomTitle(titleInput.trim());
     setTitleSaved(true);
-    showSuccess('职位已保存，侧栏将显示为：' + (titleInput.trim() || '默认角色'));
+    showSuccess(t('positionSaved') + (titleInput.trim() || t('defaultRole')));
   };
 
   const handleLogout = () => {
@@ -34,11 +35,11 @@ export const Profile: React.FC = () => {
         <button
           onClick={() => navigate(-1)}
           className="p-2 text-slate-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          aria-label="返回"
+          aria-label={t('back')}
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">个人中心</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('personalCenter')}</h1>
       </div>
 
       <Card className="p-6">
@@ -52,24 +53,24 @@ export const Profile: React.FC = () => {
           </div>
           <div className="flex-1 text-center sm:text-left space-y-4">
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">昵称</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('nickname')}</p>
               <p className="text-lg font-medium text-slate-900 dark:text-slate-100">{displayName}</p>
             </div>
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">职位 / 角色</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{t('positionRole')}</p>
               <p className="text-slate-600 dark:text-slate-400 text-xs mb-2">
-                修改后将显示在侧栏底部，仅自己可见
+                {t('roleDisplayHint')}
               </p>
               <div className="flex gap-2 items-start">
                 <div className="flex-1 min-w-0">
                   <Input
                     value={titleInput}
                     onChange={(e) => { setTitleInput(e.target.value); setTitleSaved(false); }}
-                    placeholder={roleFromApi || '例如：Sales Manager'}
+                    placeholder={roleFromApi || t('roleExample')}
                   />
                 </div>
                 <Button onClick={handleSaveTitle} disabled={titleSaved && titleInput.trim() === customTitle}>
-                  {titleSaved ? '已保存' : '保存'}
+                  {titleSaved ? t('saved') : t('saveCustomer')}
                 </Button>
               </div>
             </div>
@@ -95,7 +96,7 @@ export const Profile: React.FC = () => {
             className="flex items-center gap-2 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
           >
             <LogOut size={18} />
-            退出登录
+            {t('logoutLogin')}
           </Button>
         </div>
       </Card>

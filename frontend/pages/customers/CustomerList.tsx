@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, MoreHorizontal, Filter, MessageSquarePlus, Sparkles, Edit, Trash2, Archive, LayoutGrid, List, Loader2, Download, FileUp, CheckSquare, Square, X, BoxArchive } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, Filter, MessageSquarePlus, Sparkles, Edit, Trash2, Archive, LayoutGrid, List, Loader2, Download, FileUp, CheckSquare, Square, X } from 'lucide-react';
 import { customerService, Customer } from '../../lib/services/customerService';
 import { Card, Button, Badge } from '../../components/UI';
 import { useLanguage } from '../../contexts';
@@ -368,7 +368,7 @@ export const CustomerList: React.FC = () => {
               to="/customers/archived"
               className="text-sm text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary flex items-center gap-1"
             >
-              <BoxArchive size={16} />
+              <Archive size={16} />
               查看归档
             </Link>
           </div>

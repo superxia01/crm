@@ -353,6 +353,71 @@ export const translations = {
     typeMeeting: '会议',
     typeEmail: '邮件',
     typeWeChat: '微信',
-    typeOther: '其他'
+    typeOther: '其他',
+
+    // Layout & Navigation
+    personalCenter: '个人中心',
+    enterPersonalCenter: '进入个人中心',
+    logoutLogin: '退出登录',
+    switchLanguage: '切换语言',
+    toggleTheme: '切换主题',
+    back: '返回',
+
+    // Profile
+    nickname: '昵称',
+    positionRole: '职位 / 角色',
+    roleDisplayHint: '修改后将显示在侧栏底部，仅自己可见',
+    roleExample: '例如：Sales Manager',
+    saved: '已保存',
+    positionSaved: '职位已保存，侧栏将显示为：',
+    defaultRole: '默认角色',
+
+    // Deals
+    dealNo: '编号',
+    dealNoPlaceholder: '编号',
+    productService: '产品/服务',
+    productServicePlaceholder: '例如：年度服务费',
+    dealType: '类型',
+    typeSale: '销售',
+    typeRenewal: '续费',
+    typeProject: '项目',
+    amount: '金额',
+    currency: '币种',
+    quantity: '数量',
+    unit: '单位',
+    dealDate: '成交日期',
+    contractNo: '合同编号',
+    paymentStatus: '回款状态',
+    paymentStatusPending: '待回款',
+    paymentStatusPartial: '部分回款',
+    paymentStatusPaid: '已回款',
+    paidAmount: '已回款金额',
+    signedDate: '签约日期',
+    paidDate: '回款日期',
+    isRepeatPurchase: '复购',
+    selectCustomer: '请选择客户',
+    editDeal: '编辑业绩',
+    newDeal: '新增业绩',
+    confirmDeleteDeal: '确定要删除这条业绩记录吗？',
+    noDealsYet: '暂无业绩记录，点击「新增业绩」添加',
+    totalItems: '共 {total} 条',
+    prevPage: '上一页',
+    nextPage: '下一页',
+
+    // Validation Messages
+    validationRequiredFields: '请填写客户、产品/服务、成交日期',
+    validationAmountNegative: '金额不能为负',
+
+    // Activities Page
+    activitiesSubtitle: '查看系统中的所有操作和事件',
+    filterAll: '全部',
+    userActions: '用户操作',
+    aiEvents: 'AI 事件',
+    refresh: '刷新',
+    noActivitiesYet: '暂无活动记录',
+    noUserActivities: '暂无用户操作记录',
+    noAiActivities: '暂无 AI 事件记录',
+    pageXofY: '第 {page} / {total} 页',
+    totalRecords: '共 {total} 条记录'
   }
 };

@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import { Clock, User, Bot, Loader2, Filter, RefreshCw } from 'lucide-react';
 import { activityService, Activity } from '../lib/services/activityService';
 import { Card } from '../components/UI';
-import { useToast } from '../contexts';
+import { useToast, useLanguage } from '../contexts';
 
 export const Activities: React.FC = () => {
   const { showError } = useToast();
+  const { t } = useLanguage();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'user' | 'ai'>('all');
@@ -80,8 +81,8 @@ export const Activities: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">活动记录</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">查看系统中的所有操作和事件</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t('activities')}</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">{t('activitiesSubtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -98,7 +99,7 @@ export const Activities: React.FC = () => {
                     : 'bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
                 }`}
               >
-                全部
+                {t('filterAll')}
               </button>
               <button
                 onClick={() => setFilter('user')}
@@ -108,7 +109,7 @@ export const Activities: React.FC = () => {
                     : 'bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
                 }`}
               >
-                用户操作
+                {t('userActions')}
               </button>
               <button
                 onClick={() => setFilter('ai')}
@@ -118,7 +119,7 @@ export const Activities: React.FC = () => {
                     : 'bg-gray-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
                 }`}
               >
-                AI 事件
+                {t('aiEvents')}
               </button>
             </div>
           </div>
@@ -128,7 +129,7 @@ export const Activities: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
           >
             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-            刷新
+            {t('refresh')}
           </button>
         </div>
       </Card>
@@ -141,7 +142,7 @@ export const Activities: React.FC = () => {
       ) : filteredActivities.length === 0 ? (
         <Card className="p-12 text-center">
           <p className="text-slate-500 dark:text-slate-400">
-            {filter === 'all' ? '暂无活动记录' : filter === 'user' ? '暂无用户操作记录' : '暂无 AI 事件记录'}
+            {filter === 'all' ? t('noActivitiesYet') : filter === 'user' ? t('noUserActivities') : t('noAiActivities')}
           </p>
         </Card>
       ) : (
@@ -208,7 +209,7 @@ export const Activities: React.FC = () => {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div className="text-sm text-slate-500">
-              共 {meta.total} 条记录
+              {t('totalRecords', { total: meta.total })}
             </div>
             <div className="flex gap-2">
               <button
@@ -216,17 +217,17 @@ export const Activities: React.FC = () => {
                 disabled={meta.page === 1 || isLoading}
                 className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
               >
-                上一页
+                {t('prevPage')}
               </button>
               <span className="flex items-center text-sm text-slate-600 dark:text-slate-400 px-4">
-                第 {meta.page} / {meta.total_pages} 页
+                {t('pageXofY', { page: meta.page, total: meta.total_pages })}
               </span>
               <button
                 onClick={() => setMeta(prev => ({ ...prev, page: prev.page + 1 }))}
                 disabled={meta.page === meta.total_pages || isLoading}
                 className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
               >
-                下一页
+                {t('nextPage')}
               </button>
             </div>
           </div>

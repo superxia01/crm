@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Save, Phone, Mail, MessageSquare, FileText, Calendar } from 'lucide-react';
-import { Card, Button, Input } from '../UI';
+import { Card, Button, Input } from './UI';
 import { interactionService, CreateInteractionRequest, Interaction } from '../lib/services/interactionService';
 import { useToast } from '../contexts';
 import { handleApiError } from '../lib/apiClient';

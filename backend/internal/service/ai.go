@@ -267,9 +267,7 @@ func (s *AIService) CustomerIntakeChat(req *dto.CustomerIntakeChatRequest) (*dto
 请确认以上信息是否正确？回复"确认"即可创建客户。
 
 5. 在总结之后，附加一个 JSON 块（用于系统处理）：
-```json
-{"status":"ready_for_confirmation","name":"张三","company":"ABC科技公司","position":"CTO","phone":"13800138000","email":"zhangsan@abc.com","wechat_id":"abc123","budget":"¥50,000","intent_level":"High","notes":"有意向采购CRM系统"}
-```
+JSON格式示例：{"status":"ready_for_confirmation","name":"张三","company":"ABC科技公司","position":"CTO","phone":"13800138000","email":"zhangsan@abc.com","wechat_id":"abc123","budget":"¥50,000","intent_level":"High","notes":"有意向采购CRM系统"}
 
 【JSON 格式说明】
 - status: "collecting"（收集中）或 "ready_for_confirmation"（等待确认）

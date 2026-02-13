@@ -116,7 +116,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {showUserMenu && (
               <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg shadow-lg overflow-hidden">
                 <div className="px-4 py-2.5 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/80">
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">个人中心</p>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('personalCenter')}</p>
                 </div>
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -133,14 +133,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   <User size={16} />
-                  进入个人中心
+                  {t('enterPersonalCenter')}
                 </button>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 >
                   <LogOut size={16} />
-                  退出登录
+                  {t('logoutLogin')}
                 </button>
               </div>
             )}
@@ -169,20 +169,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
           <div className="flex items-center space-x-3">
              {/* Language Switcher */}
-             <button 
+             <button
               onClick={toggleLanguage}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center space-x-1"
-              title="Switch Language"
+              title={t('switchLanguage')}
             >
               <Globe size={20} />
               <span className="text-sm font-medium uppercase">{language}</span>
             </button>
 
             {/* Theme Toggle */}
-            <button 
+            <button
               onClick={toggleTheme}
               className="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-              title="Toggle Theme"
+              title={t('toggleTheme')}
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>

@@ -5,11 +5,13 @@ import { Card, Button, Input } from '../../components/UI';
 import { dealService, CreateDealRequest } from '../../lib/services/dealService';
 import { customerService } from '../../lib/services/customerService';
 import { handleApiError } from '../../lib/apiClient';
+import { useLanguage } from '../../contexts';
 
 export const DealForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const preselectedCustomerId = searchParams.get('customer_id');
 
   const isEdit = !!id;
@@ -97,11 +99,11 @@ export const DealForm: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!form.customer_id || !form.product_or_service || !form.deal_at) {
-      setError('请填写客户、产品/服务、成交日期');
+      setError(t('validationRequiredFields'));
       return;
     }
     if (form.amount < 0) {
-      setError('金额不能为负');
+      setError(t('validationAmountNegative'));
       return;
     }
 
@@ -171,7 +173,7 @@ export const DealForm: React.FC = () => {
           <ArrowLeft size={20} className="text-slate-600 dark:text-slate-400" />
         </button>
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-          {isEdit ? '编辑业绩' : '新增业绩'}
+          {isEdit ? t('editDeal') : t('newDeal')}
         </h1>
       </div>
 
@@ -184,7 +186,7 @@ export const DealForm: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">客户 *</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('customers')} *</label>
             <select
               name="customer_id"
               value={form.customer_id || ''}
@@ -192,7 +194,7 @@ export const DealForm: React.FC = () => {
               disabled={!!preselectedCustomerId}
               className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
             >
-              <option value="">请选择客户</option>
+              <option value="">{t('selectCustomer')}</option>
               {customers.map(c => (
                 <option key={c.id} value={c.id}>{c.company} - {c.name}</option>
               ))}
@@ -200,47 +202,47 @@ export const DealForm: React.FC = () => {
           </div>
 
           <Input
-            label="产品/服务 *"
+            label={t('productService') + ' *'}
             name="product_or_service"
             value={form.product_or_service}
             onChange={handleChange}
-            placeholder="例如：年度服务费"
+            placeholder={t('productServicePlaceholder')}
           />
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">类型</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('dealType')}</label>
             <select name="deal_type" value={form.deal_type} onChange={handleChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm">
-              <option value="sale">销售</option>
-              <option value="renewal">续费</option>
-              <option value="project">项目</option>
+              <option value="sale">{t('typeSale')}</option>
+              <option value="renewal">{t('typeRenewal')}</option>
+              <option value="project">{t('typeProject')}</option>
             </select>
           </div>
 
-          <Input label="金额 *" name="amount" type="number" min={0} step={0.01} value={form.amount || ''} onChange={handleChange} />
+          <Input label={t('amount') + ' *'} name="amount" type="number" min={0} step={0.01} value={form.amount || ''} onChange={handleChange} />
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">币种</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('currency')}</label>
             <select name="currency" value={form.currency} onChange={handleChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm">
               <option value="CNY">CNY</option>
               <option value="USD">USD</option>
             </select>
           </div>
 
-          <Input label="数量" name="quantity" type="number" min={0} step={0.01} value={form.quantity} onChange={handleChange} />
-          <Input label="单位" name="unit" value={form.unit} onChange={handleChange} placeholder="piece" />
+          <Input label={t('quantity')} name="quantity" type="number" min={0} step={0.01} value={form.quantity} onChange={handleChange} />
+          <Input label={t('unit')} name="unit" value={form.unit} onChange={handleChange} placeholder="piece" />
 
-          <Input label="成交日期 *" name="deal_at" type="date" value={form.deal_at} onChange={handleChange} />
-          <Input label="合同编号" name="contract_no" value={form.contract_no} onChange={handleChange} />
+          <Input label={t('dealDate') + ' *'} name="deal_at" type="date" value={form.deal_at} onChange={handleChange} />
+          <Input label={t('contractNo')} name="contract_no" value={form.contract_no} onChange={handleChange} />
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">回款状态</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('paymentStatus')}</label>
             <select name="payment_status" value={form.payment_status} onChange={handleChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm">
-              <option value="pending">待回款</option>
-              <option value="partial">部分回款</option>
-              <option value="paid">已回款</option>
+              <option value="pending">{t('paymentStatusPending')}</option>
+              <option value="partial">{t('paymentStatusPartial')}</option>
+              <option value="paid">{t('paymentStatusPaid')}</option>
             </select>
           </div>
-          <Input label="已回款金额" name="paid_amount" type="number" min={0} step={0.01} value={form.paid_amount || ''} onChange={handleChange} />
-          <Input label="签约日期" name="signed_at" type="date" value={form.signed_at || ''} onChange={handleChange} />
-          <Input label="回款日期" name="paid_at" type="date" value={form.paid_at || ''} onChange={handleChange} />
+          <Input label={t('paidAmount')} name="paid_amount" type="number" min={0} step={0.01} value={form.paid_amount || ''} onChange={handleChange} />
+          <Input label={t('signedDate')} name="signed_at" type="date" value={form.signed_at || ''} onChange={handleChange} />
+          <Input label={t('paidDate')} name="paid_at" type="date" value={form.paid_at || ''} onChange={handleChange} />
 
           <div className="md:col-span-2 flex items-center gap-2">
             <input
@@ -251,11 +253,11 @@ export const DealForm: React.FC = () => {
               onChange={handleChange}
               className="rounded border-gray-300"
             />
-            <label htmlFor="is_repeat_purchase" className="text-sm text-slate-700 dark:text-slate-300">复购</label>
+            <label htmlFor="is_repeat_purchase" className="text-sm text-slate-700 dark:text-slate-300">{t('isRepeatPurchase')}</label>
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">备注</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('notes')}</label>
             <textarea
               name="notes"
               value={form.notes || ''}
@@ -267,10 +269,10 @@ export const DealForm: React.FC = () => {
         </div>
 
         <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-100 dark:border-slate-700">
-          <Button variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}>取消</Button>
+          <Button variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}>{t('cancel')}</Button>
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <Save size={18} className="mr-2" />}
-            保存
+            {t('saveCustomer')}
           </Button>
         </div>
       </Card>

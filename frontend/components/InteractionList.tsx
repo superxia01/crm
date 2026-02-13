@@ -123,7 +123,7 @@ export const InteractionList: React.FC<InteractionListProps> = ({
       )}
 
       {/* 列表 */}
-      {interactions.length === 0 && !isLoading ? (
+      {interactions.length === 0 && !isLoading && (
         <div className="text-center py-8 text-slate-400 dark:text-slate-500">
           暂无互动记录
         </div>

@@ -152,16 +152,22 @@ export const useTheme = () => {
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: keyof typeof translations['en']) => string;
+  t: (key: keyof typeof translations['en'], params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('zh');
 
-  const t = (key: keyof typeof translations['en']) => {
-    return translations[language][key] || key;
+  const t = (key: keyof typeof translations['en'], params?: Record<string, string | number>) => {
+    let text = translations[language][key] || key;
+    if (params) {
+      Object.entries(params).forEach(([paramKey, value]) => {
+        text = text.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(value));
+      });
+    }
+    return text;
   };
 
   return (

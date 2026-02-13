@@ -4,10 +4,12 @@ import { Plus, ArrowLeft, Loader2, Edit, Trash2, MoreHorizontal, DollarSign } fr
 import { Card, Button, Badge } from '../../components/UI';
 import { dealService, Deal } from '../../lib/services/dealService';
 import { handleApiError } from '../../lib/apiClient';
+import { useLanguage } from '../../contexts';
 
 export const DealList: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const customerIdParam = searchParams.get('customer_id');
 
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -37,7 +39,7 @@ export const DealList: React.FC = () => {
   }, [meta.page, customerIdParam]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确定要删除这条业绩记录吗？')) return;
+    if (!confirm(t('confirmDeleteDeal'))) return;
     try {
       await dealService.deleteDeal(id);
       loadDeals();
@@ -91,20 +93,20 @@ export const DealList: React.FC = () => {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-gray-50/50 dark:bg-slate-800/50">
                 <tr>
-                  <th className="px-4 py-3 font-medium">编号</th>
-                  {!customerIdParam && <th className="px-4 py-3 font-medium">客户</th>}
-                  <th className="px-4 py-3 font-medium">产品/服务</th>
-                  <th className="px-4 py-3 font-medium">金额</th>
-                  <th className="px-4 py-3 font-medium">成交日期</th>
-                  <th className="px-4 py-3 font-medium">回款状态</th>
-                  <th className="px-4 py-3 font-medium text-right">操作</th>
+                  <th className="px-4 py-3 font-medium">{t('dealNo')}</th>
+                  {!customerIdParam && <th className="px-4 py-3 font-medium">{t('customers')}</th>}
+                  <th className="px-4 py-3 font-medium">{t('productService')}</th>
+                  <th className="px-4 py-3 font-medium">{t('amount')}</th>
+                  <th className="px-4 py-3 font-medium">{t('dealDate')}</th>
+                  <th className="px-4 py-3 font-medium">{t('paymentStatus')}</th>
+                  <th className="px-4 py-3 font-medium text-right">{t('colAction')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                 {deals.length === 0 ? (
                   <tr>
                     <td colSpan={customerIdParam ? 6 : 7} className="px-4 py-12 text-center text-slate-500">
-                      暂无业绩记录，点击「新增业绩」添加
+                      {t('noDealsYet')}
                     </td>
                   </tr>
                 ) : (
@@ -130,7 +132,7 @@ export const DealList: React.FC = () => {
                       </td>
                       <td className="px-4 py-4">
                         <Badge color={getPaymentStatusColor(deal.payment_status)}>
-                          {deal.payment_status === 'paid' ? '已回款' : deal.payment_status === 'partial' ? '部分回款' : '待回款'}
+                          {deal.payment_status === 'paid' ? t('paymentStatusPaid') : deal.payment_status === 'partial' ? t('paymentStatusPartial') : t('paymentStatusPending')}
                         </Badge>
                       </td>
                       <td className="px-4 py-4 text-right relative">
@@ -140,7 +142,7 @@ export const DealList: React.FC = () => {
                             size="sm"
                             onClick={() => navigate(`/deals/${deal.id}/edit`)}
                           >
-                            <Edit size={14} className="mr-1" /> 编辑
+                            <Edit size={14} className="mr-1" /> {t('actionEdit')}
                           </Button>
                           <button
                             onClick={() => setOpenMenuId(openMenuId === deal.id ? null : deal.id)}
@@ -155,7 +157,7 @@ export const DealList: React.FC = () => {
                               className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                               onClick={() => handleDelete(deal.id)}
                             >
-                              <Trash2 size={14} /> 删除
+                              <Trash2 size={14} /> {t('actionDelete')}
                             </button>
                           </div>
                         )}
@@ -169,7 +171,7 @@ export const DealList: React.FC = () => {
           {meta.total_pages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-slate-700">
               <span className="text-sm text-slate-500">
-                共 {meta.total} 条
+                {t('totalItems', { total: meta.total })}
               </span>
               <div className="flex gap-2">
                 <Button
@@ -178,7 +180,7 @@ export const DealList: React.FC = () => {
                   disabled={meta.page <= 1}
                   onClick={() => setMeta(m => ({ ...m, page: m.page - 1 }))}
                 >
-                  上一页
+                  {t('prevPage')}
                 </Button>
                 <Button
                   variant="outline"
@@ -186,7 +188,7 @@ export const DealList: React.FC = () => {
                   disabled={meta.page >= meta.total_pages}
                   onClick={() => setMeta(m => ({ ...m, page: m.page + 1 }))}
                 >
-                  下一页
+                  {t('nextPage')}
                 </Button>
               </div>
             </div>
